@@ -1,6 +1,7 @@
 services:
   cuos-iac-webui:
-    image: "ghcr.io/cuos-dev/cuos-iac-webui:latest"
+    image: "ghcr.io/cuos-dev/cuos-iac-webui:v0.1.0"
+    digest: "sha256:8448e9888defa2cb9d9ed93aa266947ae4cf71d96048fe39edf8281455dcd5cc"
     container_name: cuos-iac-webui
     volumes:
       - /var/run/cuos.sock:/var/run/cuos.sock

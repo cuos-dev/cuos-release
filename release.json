@@ -1,24 +1,21 @@
 {
 	"os_image": "ghcr.io/cuos-dev/cuos-system",
-	"os_image_version": "latest",
-	"os_image_digest": "",
+	"os_image_version": "v0.1.0",
+	"os_image_digest": "sha256:6624e320e33bf92b4d1b334c457e41249b31a31bc4d945319c8cab882d9bb3c0",
 	"rpi-arm64_image": "ghcr.io/cuos-dev/cuos-system-rpi-arm64",
-	"rpi-arm64_image_version": "latest",
-	"rpi-arm64_image_digest": "",
+	"rpi-arm64_image_version": "v0.1.0",
+	"rpi-arm64_image_digest": "sha256:c4ced96eea5d60f388c0db41eecf53ed7570c28208b72809a30f29fd69038bf3",
 	"lxc_image": "ghcr.io/cuos-dev/cuos-system-lxc",
-	"lxc_image_version": "latest",
-	"lxc_image_digest": "",
-	"os_image_lxc": "ghcr.io/cuos-dev/cuos-system-lxc",
-	"os_image_lxc_version": "latest",
-	"os_image_lxc_digest": "",
+	"lxc_image_version": "v0.1.0",
+	"lxc_image_digest": "sha256:46c5cb9a0f586d61fccd8bf85621fea604eb6a5f632b350f0d40a97662191c3e",
 	"updater_image": "ghcr.io/cuos-dev/cuos-updater",
-	"updater_image_version": "latest",
-	"updater_image_digest": "",
+	"updater_image_version": "v0.1.0",
+	"updater_image_digest": "sha256:412f98833bec181b8d722550734f4a127c38343cb034093ffd020115bf29a170",
 	"init_image": "ghcr.io/cuos-dev/cuos-iac",
-	"init_image_version": "latest",
-	"init_image_digest": "",
+	"init_image_version": "v0.1.0",
+	"init_image_digest": "sha256:bc02ca8c8817b7e0da6db8d73f8bed655f74dcccea825e83bd2f0f90ebbb5695",
 	"update_registry": "ghcr.io/cuos-dev/",
-	"release-signing-keys": [
+	"release_repo_signing_keys": [
 		"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHqtW3L6+pqcb7e/fdXT1Josk9zNKCdIQqKvwBPG8VjW"
 	]
 }
