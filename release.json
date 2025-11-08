@@ -1,0 +1,24 @@
+{
+	"os_image": "ghcr.io/cuos-dev/cuos-system",
+	"os_image_version": "latest",
+	"os_image_digest": "",
+	"rpi-arm64_image": "ghcr.io/cuos-dev/cuos-system-rpi-arm64",
+	"rpi-arm64_image_version": "latest",
+	"rpi-arm64_image_digest": "",
+	"lxc_image": "ghcr.io/cuos-dev/cuos-system-lxc",
+	"lxc_image_version": "latest",
+	"lxc_image_digest": "",
+	"os_image_lxc": "ghcr.io/cuos-dev/cuos-system-lxc",
+	"os_image_lxc_version": "latest",
+	"os_image_lxc_digest": "",
+	"updater_image": "ghcr.io/cuos-dev/cuos-updater",
+	"updater_image_version": "latest",
+	"updater_image_digest": "",
+	"init_image": "ghcr.io/cuos-dev/cuos-iac",
+	"init_image_version": "latest",
+	"init_image_digest": "",
+	"update_registry": "ghcr.io/cuos-dev/",
+	"release-signing-keys": [
+		"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHqtW3L6+pqcb7e/fdXT1Josk9zNKCdIQqKvwBPG8VjW"
+	]
+}

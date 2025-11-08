@@ -1,0 +1,9 @@
+services:
+  cuos-iac-fleet-agent:
+    image: "ghcr.io/cuos-dev/cuos-iac-fleet-agent:latest"
+    container_name: cuos-iac-fleet-agent
+    volumes:
+      - /var/run/cuos.sock:/var/run/cuos.sock
+      - /system.json:/system.json:ro
+    restart: always
+
