@@ -6,7 +6,7 @@ This is useful for existing infrastructure and for development.
 Prerequisits:
 
 * Docker installed
-* Logged in to all required image registries
+* jq installed
 
 ## Start (quick)
 

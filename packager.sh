@@ -36,10 +36,16 @@ download_image() {
   exit 1
 }
 
+docker_login() {
+  CONFIG_PATH="$1" "${SRC_DIR}/util-docker-login.sh"
+}
+
 
 create_image() {
   mkdir -p "${OUTPUT_DIR}"
   echo "${merged_config}" >"${OUTPUT_DIR}/config.json"
+
+  docker_login "${OUTPUT_DIR}/config.json"
 
   download_image "${IMAGE_FACTORY_VERSION}" "${IMAGE_FACTORY_DIGEST}"
 
@@ -117,6 +123,8 @@ case "${MODE}" in
 
     export SYSTEM_CONFIG_PATH="${SCRIPT_DIR}/cuos-iac-local/config-${IAC_COMPOSE_PROJECT_NAME}.json"
     echo "${merged_config}" >"${SYSTEM_CONFIG_PATH}"
+
+    docker_login "${SYSTEM_CONFIG_PATH}"
     iac_compose_file="${SCRIPT_DIR}/cuos-iac-local/docker-compose.yml"
 
     IAC_VERSION="$(grep "image" "${iac_compose_file}" | sed -n 's/^ *image: "//p' | sed -n 's/"$//p')"
