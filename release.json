@@ -14,6 +14,9 @@
 	"init_image": "ghcr.io/cuos-dev/cuos-iac",
 	"init_image_version": "v0.1.0",
 	"init_image_digest": "sha256:bc02ca8c8817b7e0da6db8d73f8bed655f74dcccea825e83bd2f0f90ebbb5695",
+	"iac_image": "ghcr.io/cuos-dev/cuos-iac",
+	"iac_image_version": "v0.1.0",
+	"iac_image_digest": "sha256:bc02ca8c8817b7e0da6db8d73f8bed655f74dcccea825e83bd2f0f90ebbb5695",
 	"update_registry": "ghcr.io/cuos-dev/",
 	"release_repo_signing_keys": [
 		"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHqtW3L6+pqcb7e/fdXT1Josk9zNKCdIQqKvwBPG8VjW"
