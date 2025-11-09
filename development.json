@@ -1,0 +1,14 @@
+{
+	"os_image_version": "development",
+	"os_image_digest": "",
+	"rpi-arm64_image_version": "development",
+	"rpi-arm64_image_digest": "",
+	"lxc_image_version": "development",
+	"lxc_image_digest": "",
+	"updater_image_version": "development",
+	"updater_image_digest": "",
+	"init_image_version": "development",
+	"init_image_digest": "",
+	"iac_image_version": "development",
+	"iac_image_digest": ""
+}
