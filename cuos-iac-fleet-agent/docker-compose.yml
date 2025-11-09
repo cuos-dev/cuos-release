@@ -1,10 +1,19 @@
 services:
   cuos-iac-fleet-agent:
     image: "ghcr.io/cuos-dev/cuos-iac-fleet-agent:v0.1.0"
-    digest: "sha256:d83d3feb0d2c82074f953b999a3ec454d6a8114fc6a11b0632314833a4a303ee"
+    x-digest: "sha256:d83d3feb0d2c82074f953b999a3ec454d6a8114fc6a11b0632314833a4a303ee"
     container_name: cuos-iac-fleet-agent
     volumes:
-      - /var/run/cuos.sock:/var/run/cuos.sock
-      - /system.json:/system.json:ro
+      - type: bind
+        source: /var/run/cuos.sock
+        target: /var/run/cuos.sock
+        bind:
+          create_host_path: false
+      - type: bind
+        source: "${SYSTEM_CONFIG_PATH:-/system.json}"
+        target: /system.json
+        read_only: true
+        bind:
+          create_host_path: false
     restart: always
 

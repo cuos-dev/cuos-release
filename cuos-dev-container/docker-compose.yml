@@ -1,24 +1,78 @@
 services:
   cuos-dev-container:
     image: "ghcr.io/cuos-dev/cuos-iac-dev-container:v0.1.0"
-    digest: "sha256:0f41b7166ab22254c0153d5a836c26a70e528a59f73fb68dc9e3502085fea05b"
+    x-digest: "sha256:0f41b7166ab22254c0153d5a836c26a70e528a59f73fb68dc9e3502085fea05b"
     container_name: cuos-dev-container
     network_mode: host
     pid: host
     privileged: true
     volumes:
-      - /root/.docker/config.json:/root/.docker/config.json:ro
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /var/run/cuos.sock:/var/run/cuos.sock
-      - /data:/data
-      - /dev:/dev
-      - /proc:/proc
-      - /etc/partition_mode:/etc/partition_mode:ro
-      - /system.json:/system.json:ro
-      - /usr/local/share/ca-certificates/custom:/usr/local/share/ca-certificates/custom:ro
-      - /run/systemd/journal/socket:/run/systemd/journal/socket
-      - /var/log/journal:/var/log/journal:ro
-      - /etc/machine-id:/etc/machine-id:ro
+      - type: bind
+        source: /root/.docker/config.json
+        target: /root/.docker/config.json
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /var/run/cuos.sock
+        target: /var/run/cuos.sock
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /data
+        target: /data
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /dev
+        target: /dev
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /proc
+        target: /proc
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /etc/partition_mode
+        target: /etc/partition_mode
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: "${SYSTEM_CONFIG_PATH:-/system.json}"
+        target: /system.json
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /usr/local/share/ca-certificates/custom
+        target: /usr/local/share/ca-certificates/custom
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /run/systemd/journal/socket
+        target: /run/systemd/journal/socket
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /var/log/journal
+        target: /var/log/journal
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /etc/machine-id
+        target: /etc/machine-id
+        read_only: true
+        bind:
+          create_host_path: false
     environment:
       - TZ=Europe/Berlin
     restart: always
