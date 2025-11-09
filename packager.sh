@@ -37,7 +37,7 @@ download_image() {
 }
 
 docker_login() {
-  CONFIG_PATH="$1" "${SRC_DIR}/util-docker-login.sh"
+  CONFIG_PATH="$1" "${SRC_DIR}/util-docker-login.sh" || exit "$?"
 }
 
 
@@ -74,28 +74,20 @@ if ! command -v jq >/dev/null 2>&1; then
 	raise "jq is required but not installed. Please install jq."
 fi
 
-if [ $# -ne 2 ]; then
-  echo "Usage: $0 mode path/to/system.json" >&2
-  echo "mode = image | installer | lxc | rpi-arm64 | start-iac-local | system-json" >&2
+if [ $# -lt 2 ]; then
+  echo "Usage: $0 mode path/to/system.json [another/system.json]" >&2
+  echo "mode = image | installer | lxc | rpi-arm64 | start-iac-local | config" >&2
   exit 2
 fi
 
 MODE="$1"
-
-FILE="$2"
-# path to system-json
-
-if [[ ! -f "${FILE}" ]]; then
-	raise "Config file not found."
-fi
+shift
 
 
-merged_config="$("${SRC_DIR}/merge-configs.sh" "${FILE}")" || exit 1
-
-OS_ARCH="${3:-"$(arch)"}"
+merged_config="$("${SRC_DIR}/merge-configs.sh" "$@")" || exit 1
 
 case "${MODE}" in
-  "system-json")
+  "config")
     echo "${merged_config}"
     exit
     ;;
@@ -118,7 +110,7 @@ case "${MODE}" in
       -e "TARGET=rpi"
     ;;
   "start-iac-local")
-    IAC_COMPOSE_PROJECT_NAME="iac-$(printf '%s' "$FILE" | sha1sum | cut -c1-8)"
+    IAC_COMPOSE_PROJECT_NAME="iac-$(printf '%s' "$*" | sha1sum | cut -c1-8)"
     export IAC_COMPOSE_PROJECT_NAME
 
     export SYSTEM_CONFIG_PATH="${SCRIPT_DIR}/cuos-iac-local/config-${IAC_COMPOSE_PROJECT_NAME}.json"

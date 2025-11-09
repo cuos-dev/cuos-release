@@ -29,7 +29,7 @@ Generate or copy a merged system.json into this directory:
 
 ```sh
 cd cuos-iac-local/
-../packager.sh system-json path/to/system.json >system.json
+../packager.sh config path/to/system.json >system.json
 ```
 
 Start the stack:
