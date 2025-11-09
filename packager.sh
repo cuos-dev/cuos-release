@@ -9,6 +9,13 @@ OUTPUT_DIR="${PWD}/output"
 # shellcheck source=/dev/null
 source "${SCRIPT_DIR}/.versions.env"
 
+if [[ "${DEVELOPMENT}" == "1" ]]; then
+  IMAGE_FACTORY_VERSION="ghcr.io/cuos-dev/cuos-image-factory:development"
+  IMAGE_FACTORY_DIGEST=""
+
+  INSTALLER_FACTORY_VERSION="ghcr.io/cuos-dev/cuos-installer-factory:development"
+  INSTALLER_FACTORY_DIGEST=""
+fi
 
 raise() {
 	echo "Error: $*" >&2
@@ -43,19 +50,16 @@ docker_login() {
 
 create_image() {
   mkdir -p "${OUTPUT_DIR}"
-  echo "${merged_config}" >"${OUTPUT_DIR}/config.json"
+  echo "${merged_config}" >"${OUTPUT_DIR}/system.json"
 
-  docker_login "${OUTPUT_DIR}/config.json"
+  docker_login "${OUTPUT_DIR}/system.json"
 
   download_image "${IMAGE_FACTORY_VERSION}" "${IMAGE_FACTORY_DIGEST}"
-
-  touch "${HOME}/.docker/config.json" 2>/dev/null
-  cp "${HOME}/.docker/config.json" "${SCRIPT_DIR}/.docker_config.json"
 
   docker run --rm \
     --pull=never \
     --privileged \
-    -v "${SCRIPT_DIR}/.docker_config.json":/root/.docker/config.json:ro \
+    -v "${HOME}/.docker/config.json":/root/.docker/config.json:ro \
     -v "${OUTPUT_DIR}:/output" \
     "$@" \
     -e "OS_ARCH=${OS_ARCH:-}" \
