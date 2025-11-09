@@ -9,7 +9,7 @@ OUTPUT_DIR="${PWD}/output"
 # shellcheck source=/dev/null
 source "${SCRIPT_DIR}/.versions.env"
 
-if [[ "${DEVELOPMENT}" == "1" ]]; then
+if [[ "${DEVELOPMENT:-}" == "1" ]]; then
   IMAGE_FACTORY_VERSION="ghcr.io/cuos-dev/cuos-image-factory:development"
   IMAGE_FACTORY_DIGEST=""
 
@@ -62,7 +62,6 @@ create_image() {
     -v "${HOME}/.docker/config.json":/root/.docker/config.json:ro \
     -v "${OUTPUT_DIR}:/output" \
     "$@" \
-    -e "OS_ARCH=${OS_ARCH:-}" \
     "${IMAGE_FACTORY_VERSION}" || exit "$?"
 }
 
@@ -97,6 +96,7 @@ case "${MODE}" in
     ;;
   "lxc")
     create_image \
+      -v "/var/run/docker.sock:/var/run/docker.sock" \
       -e "OS_ARCH=lxc"
     ;;
   "installer")
