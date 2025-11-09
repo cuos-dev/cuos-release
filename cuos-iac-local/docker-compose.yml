@@ -1,0 +1,39 @@
+services:
+  cuos-iac:
+    image: "ghcr.io/cuos-dev/cuos-iac:v0.1.0"
+    x-digest: "sha256:bc02ca8c8817b7e0da6db8d73f8bed655f74dcccea825e83bd2f0f90ebbb5695"
+    container_name: cuos-iac
+    volumes:
+      - type: bind
+        source: "${HOME:-/root}/.docker/config.json"
+        target: /root/.docker/config.json
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+        bind:
+          create_host_path: false
+      - type: bind
+        source: "${SYSTEM_CONFIG_PATH:-./system.json}"
+        target: /system.json
+        bind:
+          create_host_path: false
+    environment:
+      SYSTEM_TYPE: "local"
+      SYSTEM_CONFIG_PATH: "${SYSTEM_CONFIG_PATH:-${PWD}/system.json}"
+      IAC_COMPOSE_PROJECT_NAME: "${IAC_COMPOSE_PROJECT_NAME:-iac-local}"
+      IAC_LOCAL_SELFUPDATE: "${IAC_LOCAL_SELFUPDATE:-true}"
+    deploy:
+      resources:
+        limits:
+          cpus: 1
+          memory: 500M
+          pids: 100
+        reservations:
+          cpus: '0.5'
+          memory: 250M
+    read_only: true
+    restart: always
+
