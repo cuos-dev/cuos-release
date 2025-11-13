@@ -10,7 +10,7 @@ fi
 TOP_REPO_DIR="$(git rev-parse --show-superproject-working-tree 2>/dev/null)"
 TOP_REPO_DIR="${TOP_REPO_DIR:-"$(git rev-parse --show-toplevel)"}"
 
-if [ ! -f "$SUPER_TOPLEVEL/.gitmodules" ]; then
+if [ ! -f "$TOP_REPO_DIR/.gitmodules" ]; then
   echo "Error: no submodules found." >&2
   exit 1
 fi
@@ -19,7 +19,6 @@ fi
 git -C "${TOP_REPO_DIR}" submodule update --init --recursive
 
 git -C "${TOP_REPO_DIR}" submodule foreach --recursive '
-  set -x
   echo "=== $name ($path) ==="
   # fetch remote
   git fetch --prune origin
@@ -65,7 +64,7 @@ git -C "${TOP_REPO_DIR}" submodule foreach --recursive '
     echo "Verification FAILED for $remote_sha — leaving submodule at current commit"
     exit 1
   fi
-'
+' || exit "$?"
 
-exit "$?"
-
+echo
+echo "Everything updated."
