@@ -13,7 +13,7 @@ Prerequisits:
 From the repo root:
 
 ```sh
-./packager.sh start-iac-local path/to/system.json
+./tool.sh start-iac-local path/to/system.json
 ```
 
 Check running containers:
@@ -29,7 +29,7 @@ Generate or copy a merged system.json into this directory:
 
 ```sh
 cd cuos-iac-local/
-../packager.sh config path/to/system.json >system.json
+../tool.sh config path/to/system.json >system.json
 ```
 
 Start the stack:
@@ -44,9 +44,21 @@ Verify services:
 docker ps
 ```
 
-## Stop
+## Stop or update
 
-Just stop all started containers and remove dangling volumes.
+Trigger an update:
+
+```sh
+./tool.sh update-iac-local path/to/system.json
+```
+
+Stop the manager and all started services:
+
+```sh
+./tool.sh stop-iac-local path/to/system.json
+```
+
+Or just stop all started containers and remove dangling volumes.
 
 **Attention**: `docker compose down` will only stop the iac manager, not the started applications.
 
