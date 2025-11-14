@@ -19,6 +19,16 @@ services:
         bind:
           create_host_path: false
       - type: bind
+        source: /var/lib/docker
+        target: /var/lib/docker
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /var/lib/containerd
+        target: /var/lib/containerd
+        bind:
+          create_host_path: false
+      - type: bind
         source: /var/run/cuos.sock
         target: /var/run/cuos.sock
         bind:
