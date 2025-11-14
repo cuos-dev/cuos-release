@@ -122,6 +122,9 @@ update_iac_local() {
 if ! command -v jq >/dev/null 2>&1; then
 	raise "jq is required but not installed. Please install jq."
 fi
+if ! command -v docker >/dev/null 2>&1; then
+	raise "jq is required but not installed. Please install jq."
+fi
 if [[ "$(uname)" = "Darwin" ]]; then
   sed() {
     gsed "$@"
@@ -190,7 +193,7 @@ EOF
     merged_config="$("${SRC_DIR}/merge-configs.sh" "$@")" || exit 1
     start_iac_local
     ;;
-## stop-iac-local  path/to/system.json[]  - Stop IaC local
+## stop-iac-local  path/to/system.json[] - Stop IaC local
   "stop-iac-local")
     merged_config="$("${SRC_DIR}/merge-configs.sh" "$@")" || exit 1
     stop_iac_local
@@ -199,6 +202,12 @@ EOF
   "update-iac-local")
     merged_config="$("${SRC_DIR}/merge-configs.sh" "$@")" || exit 1
     update_iac_local
+    ;;
+##
+## HELPER
+## root-password                   - Helper to create hash for os_root_admin
+  "root-password")
+    "${SRC_DIR}/create-root-password.sh"
     ;;
   *)
     echo "Error: Unknown command. Exiting." >&2
