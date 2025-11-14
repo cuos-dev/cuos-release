@@ -150,10 +150,6 @@ EOF
   "update")
     "${SRC_DIR}/submodule-update.sh" || exit "$?"
     ;;
-  *)
-    echo "Error: Unknown command. Exiting." >&2
-    exit 2
-    ;;
 ## config    path/to/system.json[] - Show merged system configuration
   "config")
     merged_config="$("${SRC_DIR}/merge-configs.sh" "$@")" || exit 1
@@ -203,5 +199,9 @@ EOF
   "update-iac-local")
     merged_config="$("${SRC_DIR}/merge-configs.sh" "$@")" || exit 1
     update_iac_local
+    ;;
+  *)
+    echo "Error: Unknown command. Exiting." >&2
+    exit 2
     ;;
 esac
