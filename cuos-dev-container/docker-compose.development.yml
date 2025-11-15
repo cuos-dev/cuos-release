@@ -1,0 +1,4 @@
+services:
+  cuos-dev-container:
+    image: "ghcr.io/cuos-dev/cuos-iac-dev-container:development"
+    x-digest: ""

@@ -1,0 +1,4 @@
+services:
+  cuos-iac-webui:
+    image: "ghcr.io/cuos-dev/cuos-iac-webui:development"
+    x-digest: ""

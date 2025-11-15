@@ -1,0 +1,4 @@
+services:
+  cuos-iac-fleet-agent:
+    image: "ghcr.io/cuos-dev/cuos-iac-fleet-agent:development"
+    x-digest: ""
