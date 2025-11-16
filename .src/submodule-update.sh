@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
 # Detect whether we are in a git repo
 if ! git rev-parse --git-dir >/dev/null 2>&1; then
   echo "Error: Not a git repository." >&2
@@ -9,6 +11,8 @@ fi
 
 TOP_REPO_DIR="$(git rev-parse --show-superproject-working-tree 2>/dev/null)"
 TOP_REPO_DIR="${TOP_REPO_DIR:-"$(git rev-parse --show-toplevel)"}"
+
+git -C "${SCRIPT_DIR}" config allowedSignersFile "./.allowed-signers"
 
 if [ ! -f "$TOP_REPO_DIR/.gitmodules" ]; then
   echo "Error: no submodules found." >&2
