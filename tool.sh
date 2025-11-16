@@ -56,10 +56,12 @@ create_image() {
 
   download_image "${IMAGE_FACTORY_VERSION}" "${IMAGE_FACTORY_DIGEST}"
 
+  DOCKER_CONFIG_LOCAL="${DOCKER_CONFIG:-"${HOME}/.docker/"}"
+
   docker run --rm \
     --pull=never \
     --privileged \
-    -v "${HOME}/.docker/config.json":/root/.docker/config.json:ro \
+    -v "${DOCKER_CONFIG_LOCAL}/config.json":/root/.docker/config.json:ro \
     -v "${OUTPUT_DIR}:/output" \
     "$@" \
     "${IMAGE_FACTORY_VERSION}" || exit "$?"
