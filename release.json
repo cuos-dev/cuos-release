@@ -1,24 +1,24 @@
 {
-	"os_image": "ghcr.io/cuos-dev/cuos-system",
-	"os_image_version": "v0.1.1",
-	"os_image_digest": "sha256:a65907916c0d596778aeb4ee32cc86620ebd253a4b8013a64a0dc3b0cc4616af",
-	"rpi-arm64_image": "ghcr.io/cuos-dev/cuos-system-rpi-arm64",
-	"rpi-arm64_image_version": "v0.1.1",
-	"rpi-arm64_image_digest": "sha256:5d459337bf8bbc5094d26187c3189326570edf1e9efb35007d617b111ad5bf54",
-	"lxc_image": "ghcr.io/cuos-dev/cuos-system-lxc",
-	"lxc_image_version": "v0.1.1",
-	"lxc_image_digest": "sha256:2113217771fa47b241727575c84aee17d058737bf58b200e8f882df741d61b65",
-	"updater_image": "ghcr.io/cuos-dev/cuos-updater",
-	"updater_image_version": "v0.1.1",
-	"updater_image_digest": "sha256:778587c4817b406ac381454a8b4abf5633fbffd0c5ef90d4c3e756df5e10e158",
-	"init_image": "ghcr.io/cuos-dev/cuos-iac",
-	"init_image_version": "v0.1.0",
-	"init_image_digest": "sha256:bc02ca8c8817b7e0da6db8d73f8bed655f74dcccea825e83bd2f0f90ebbb5695",
-	"iac_image": "ghcr.io/cuos-dev/cuos-iac",
-	"iac_image_version": "v0.1.0",
-	"iac_image_digest": "sha256:bc02ca8c8817b7e0da6db8d73f8bed655f74dcccea825e83bd2f0f90ebbb5695",
-	"update_registry": "ghcr.io/cuos-dev/",
-	"release_repo_signing_keys": [
-		"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHqtW3L6+pqcb7e/fdXT1Josk9zNKCdIQqKvwBPG8VjW"
-	]
+  "os_image": "ghcr.io/cuos-dev/cuos-system",
+  "os_image_version": "v0.2.0",
+  "os_image_digest": "sha256:4e4d3594205888f46e71537bb68ac83e87d6e76535cc52e8b61fe5ca8439bb66",
+  "rpi-arm64_image": "ghcr.io/cuos-dev/cuos-system-rpi-arm64",
+  "rpi-arm64_image_version": "v0.2.0",
+  "rpi-arm64_image_digest": "sha256:79dde28d1bd0a432aabf76187c9256fe733f3346e05bfee5881be0d125472072",
+  "lxc_image": "ghcr.io/cuos-dev/cuos-system-lxc",
+  "lxc_image_version": "v0.2.0",
+  "lxc_image_digest": "sha256:b65b373517c426d904080ce4eec3dda8c9bf10f3c48a4996d6152afab217a5a9",
+  "updater_image": "ghcr.io/cuos-dev/cuos-updater",
+  "updater_image_version": "v0.2.0",
+  "updater_image_digest": "sha256:e3ad1328fac12cbdd4889a6b2b6c834f3557a25e435f30e94289d8094098329f",
+  "init_image": "ghcr.io/cuos-dev/cuos-iac",
+  "init_image_version": "v0.2.0",
+  "init_image_digest": "sha256:defcdd293f82a7d1c0ee10d90affa4156ed84a73d85bea41866a388a5eb6a30f",
+  "iac_image": "ghcr.io/cuos-dev/cuos-iac",
+  "iac_image_version": "v0.2.0",
+  "iac_image_digest": "sha256:defcdd293f82a7d1c0ee10d90affa4156ed84a73d85bea41866a388a5eb6a30f",
+  "update_registry": "ghcr.io/cuos-dev/",
+  "release_repo_signing_keys": [
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHqtW3L6+pqcb7e/fdXT1Josk9zNKCdIQqKvwBPG8VjW"
+  ]
 }
