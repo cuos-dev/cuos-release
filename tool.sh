@@ -211,6 +211,11 @@ EOF
   "root-password")
     "${SRC_DIR}/create-root-password.sh"
     ;;
+
+# only internal api:
+  "publish")
+    "${SRC_DIR}/publish/publish.sh"
+    ;;
   *)
     echo "Error: Unknown command. Exiting." >&2
     exit 2
