@@ -1,7 +1,7 @@
 services:
   cuos-iac-webui:
-    image: "ghcr.io/cuos-dev/cuos-iac-webui:v0.2.0"
-    x-digest: "sha256:2300e39756bc3e610b96a1d580e8408973e00460f8ab42487cbe89a4641e3ffc"
+    image: "ghcr.io/cuos-dev/cuos-iac-webui:v0.2.1"
+    x-digest: "sha256:e46affe218fa028c2396aa613e373cef8a6acb210978428baa92d50c7bb25905"
     container_name: cuos-iac-webui
     volumes:
       - type: bind

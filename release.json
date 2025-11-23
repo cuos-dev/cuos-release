@@ -12,11 +12,11 @@
   "updater_image_version": "v0.2.0",
   "updater_image_digest": "sha256:e3ad1328fac12cbdd4889a6b2b6c834f3557a25e435f30e94289d8094098329f",
   "init_image": "ghcr.io/cuos-dev/cuos-iac",
-  "init_image_version": "v0.2.0",
-  "init_image_digest": "sha256:defcdd293f82a7d1c0ee10d90affa4156ed84a73d85bea41866a388a5eb6a30f",
+  "init_image_version": "v0.2.1",
+  "init_image_digest": "sha256:d2ab19133b126a6fdfea6d9714676f964147c7afdae12ed657058e1ad937b04e",
   "iac_image": "ghcr.io/cuos-dev/cuos-iac",
-  "iac_image_version": "v0.2.0",
-  "iac_image_digest": "sha256:defcdd293f82a7d1c0ee10d90affa4156ed84a73d85bea41866a388a5eb6a30f",
+  "iac_image_version": "v0.2.1",
+  "iac_image_digest": "sha256:d2ab19133b126a6fdfea6d9714676f964147c7afdae12ed657058e1ad937b04e",
   "update_registry": "ghcr.io/cuos-dev/",
   "release_repo_signing_keys": [
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHqtW3L6+pqcb7e/fdXT1Josk9zNKCdIQqKvwBPG8VjW"
