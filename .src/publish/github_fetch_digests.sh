@@ -32,9 +32,6 @@ request_digests() {
         -H "X-GitHub-Api-Version: 2022-11-28" \
         "https://api.github.com/orgs/${ORG}/packages/container/${pkg}/versions?state=active&per_page=100")
 
-#      versions2=$(echo "${versions}" | jq '[ {"package": .package, "version": ( (.tags // [] ) | map(select(. != "" and . != "buildcache" and . != "latest" and . != "development")) | join(.[]) ), "name": .name }'
-#)
-
       # pick the newest active version by created_at, fall back to updated_at if created_at missing
       newest=$(echo "$versions" | jq -r '
         map(select(.metadata.container.tags and .metadata.container.tags[0] and (.metadata.container.tags[0] | test("^v")))) | (map(. + {__ts: (.created_at // .updated_at // "1970-01-01T00:00:00Z")})
@@ -76,28 +73,5 @@ request_digests() {
   printf '\n'
 }
 
-
 request_digests
-# | jq -s .
 
-exit
-
-
-jq -r '
-  def parse_semver($s):
-    ($s // "") as $v
-    | ($v | capture("(?<major>0|[1-9][0-9]*)\\.(?<minor>0|[1-9][0-9]*)\\.(?<patch>0|[1-9][0-9]*)(?:-(?<prerelease>[0-9A-Za-z.-]+))?(?:\\+(?<build>[0-9A-Za-z.-]+))?")?)
-    | {
-        raw: $v,
-        major: (.major // "0") | tonumber,
-        minor: (.minor // "0") | tonumber,
-        patch: (.patch // "0") | tonumber,
-        prerelease: (.prerelease // "")
-      };
-  def semver_key($s):
-    parse_semver($s) as $p
-    | [$p.major, $p.minor, $p.patch,
-       (if $p.prerelease=="" then 1 else 0 end),
-       ($p.prerelease | tostring)];
-  sort_by(semver_key(.version)) | last
-' file.json
