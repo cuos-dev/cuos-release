@@ -9,6 +9,7 @@ export ORG=cuos-dev
 
 # Token: Release Digest Fetch (classic)
 #export GITHUB_TOKEN=...
+# shellcheck source=/dev/null
 source "${MAIN_DIR}.publish_github_token"
 
 if [[ "$(uname)" = "Darwin" ]]; then

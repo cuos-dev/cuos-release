@@ -68,11 +68,18 @@ for file; do
 done
 
 # print in order (includes first, root last)
-for f in "${order[@]}"; do
-  printf 'Config file: %s\n' "$f" >&2
-done
+#for f in "${order[@]}"; do
+#  printf 'Config file: %s\n' "$f" >&2
+#done
 
-jq -s '
+file_dir="$(dirname -- "${order[-1]}")"
+git_dir="$(git -C "$file_dir" rev-parse --show-superproject-working-tree)"
+git_dir="${git_dir:-"$(git -C "$file_dir" rev-parse --show-toplevel)"}"
+config_filename="${order[-1]/"${git_dir}/"}"
+
+jq -s \
+  --arg filename "${config_filename}" \
+'
   # normalize "#include" to an array (string -> [string], others -> [])
   map(
     if has("#include") then
@@ -82,5 +89,7 @@ jq -s '
   )
   # now reduce (fold) the normalized inputs with recursive merge
   | reduce .[] as $item ({}; . * $item)
+  # set the file name
+  | ."__filename" = $filename
 ' "${order[@]}"
 
