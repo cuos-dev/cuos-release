@@ -85,7 +85,7 @@ create_image() {
   mkdir -p "${OUTPUT_DIR}"
   echo "${merged_config}" >"${OUTPUT_DIR}/${image_name}.json"
 
-  docker_login "${OUTPUT_DIR}/system.json"
+  docker_login "${OUTPUT_DIR}/${image_name}.json"
 
   download_image "${IMAGE_FACTORY_VERSION}" "${IMAGE_FACTORY_DIGEST}"
 
@@ -97,7 +97,7 @@ create_image() {
     --privileged \
     -v "${docker_config_local}/config.json":/root/.docker/config.json:ro \
     -v "${OUTPUT_DIR}:/output" \
-    -e "IMAGE_NAME=${image_name}"
+    -e "IMAGE_NAME=${image_name}" \
     "$@" \
     "${IMAGE_FACTORY_VERSION}" || exit "$?"
 }
@@ -115,7 +115,7 @@ create_installer() {
 
   docker run --rm \
     -v "${OUTPUT_DIR}:/output" \
-    -e "IMAGE_NAME=${image_name}"
+    -e "IMAGE_NAME=${image_name}" \
     "${INSTALLER_FACTORY_VERSION}" || exit "$?"
 }
 
