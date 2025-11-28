@@ -64,7 +64,9 @@ abspath() {
 
 
 for file; do
-  process "${file}"
+  if [[ "${file}" != -* ]]; then
+    process "${file}"
+  fi
 done
 
 # print in order (includes first, root last)

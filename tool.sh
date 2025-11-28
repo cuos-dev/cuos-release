@@ -209,8 +209,8 @@ EOF
     "installer")
       merged_config="$("${SRC_DIR}/merge-configs.sh" "$@")" || exit 1
       echo "${merged_config}" | create_image \
-        -e "OS_ARCH=$(arch || uname -m)"
-      echo "${merged_config}" | create_installer
+        -e "OS_ARCH=$(arch || uname -m)" && \
+        echo "${merged_config}" | create_installer
       ;;
 ## image     path/to/system.json[] - Build RAW image for current arch
     "image")
@@ -253,7 +253,7 @@ EOF
 ## HELPER
 ## root-password                   - Helper to create hash for os_root_admin
     "root-password")
-      "${SRC_DIR}/create-root-password.sh"
+      "${SRC_DIR}/create-root-password.sh" "$@"
       ;;
 
     # only internal api:
