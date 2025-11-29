@@ -166,6 +166,38 @@ update_iac_local() {
 }
 
 main() {
+  if ! command -v jq >/dev/null 2>&1; then
+    raise "jq is required but not installed. Please install jq."
+  fi
+  if ! command -v docker >/dev/null 2>&1; then
+    raise "jq is required but not installed. Please install jq."
+  fi
+  if [[ "$(uname)" = "Darwin" ]]; then
+    sed() {
+      gsed "$@"
+    }
+  fi
+
+  # if docker config is read only: copy it!
+  if command -v findmnt >/dev/null 2>&1 && findmnt -n -o TARGET,PROPAGATION,OPTIONS "${HOME}/.docker/config.json" | grep -q '\bro\b'; then
+    export DOCKER_CONFIG="${PWD}/.docker/"
+    if [[ ! -f "${PWD}/.docker/config.json" ]]; then
+      mkdir -p "${PWD}/.docker"
+      cat "${HOME}/.docker/config.json" >"${PWD}/.docker/config.json"
+    fi
+  fi
+
+  # shellcheck source=/dev/null
+  source "${SCRIPT_DIR}/.versions.env"
+
+  if [[ "${DEVELOPMENT:-}" == "1" ]]; then
+    IMAGE_FACTORY_VERSION="ghcr.io/cuos-dev/cuos-image-factory:development"
+    IMAGE_FACTORY_DIGEST=""
+
+    INSTALLER_FACTORY_VERSION="ghcr.io/cuos-dev/cuos-installer-factory:development"
+    INSTALLER_FACTORY_DIGEST=""
+  fi
+
 
   COMMAND="${1:-}"
   shift
@@ -245,7 +277,15 @@ EOF
       "${SRC_DIR}/create-root-password.sh" "$@"
       ;;
 
-    # only internal api:
+## config-encrypt-init [system.json] - Initiate config encryption
+## config-encrypt file.ext         - Encrypt file
+## config-decrypt file.ext         - Decrypt file
+## config-decrypt-all              - Decrypt all files, that can be decrypted
+    "config-encrypt-init"|"config-encrypt"|"config-decrypt"|"config-decrypt-all")
+      "${SRC_DIR}/${COMMAND}.sh" "$@"
+      ;;
+
+# only internal api:
     "publish")
       "${SRC_DIR}/publish/publish.sh"
       ;;
@@ -260,38 +300,6 @@ EOF
       ;;
   esac
 }
-
-if ! command -v jq >/dev/null 2>&1; then
-	raise "jq is required but not installed. Please install jq."
-fi
-if ! command -v docker >/dev/null 2>&1; then
-	raise "jq is required but not installed. Please install jq."
-fi
-if [[ "$(uname)" = "Darwin" ]]; then
-  sed() {
-    gsed "$@"
-  }
-fi
-
-# if docker config is read only: copy it!
-if command -v findmnt >/dev/null 2>&1 && findmnt -n -o TARGET,PROPAGATION,OPTIONS "${HOME}/.docker/config.json" | grep -q '\bro\b'; then
-  export DOCKER_CONFIG="${PWD}/.docker/"
-  if [[ ! -f "${PWD}/.docker/config.json" ]]; then
-    mkdir -p "${PWD}/.docker"
-    cat "${HOME}/.docker/config.json" >"${PWD}/.docker/config.json"
-  fi
-fi
-
-# shellcheck source=/dev/null
-source "${SCRIPT_DIR}/.versions.env"
-
-if [[ "${DEVELOPMENT:-}" == "1" ]]; then
-  IMAGE_FACTORY_VERSION="ghcr.io/cuos-dev/cuos-image-factory:development"
-  IMAGE_FACTORY_DIGEST=""
-
-  INSTALLER_FACTORY_VERSION="ghcr.io/cuos-dev/cuos-installer-factory:development"
-  INSTALLER_FACTORY_DIGEST=""
-fi
 
 
 main "$@"
