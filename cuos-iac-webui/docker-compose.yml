@@ -15,9 +15,14 @@ services:
         read_only: true
         bind:
           create_host_path: false
+      - type: volume
+        source: iac-socket
+        target: /socket
     ports:
       - "8030:3000"
     restart: always
-#    profiles:
-#      - dev
 
+volumes:
+  iac-socket:
+    external:
+      name: "iac-socket"

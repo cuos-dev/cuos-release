@@ -6,17 +6,6 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 SRC_DIR="${SCRIPT_DIR}/.src"
 OUTPUT_DIR="${PWD}/output"
 
-# shellcheck source=/dev/null
-source "${SCRIPT_DIR}/.versions.env"
-
-if [[ "${DEVELOPMENT:-}" == "1" ]]; then
-  IMAGE_FACTORY_VERSION="ghcr.io/cuos-dev/cuos-image-factory:development"
-  IMAGE_FACTORY_DIGEST=""
-
-  INSTALLER_FACTORY_VERSION="ghcr.io/cuos-dev/cuos-installer-factory:development"
-  INSTALLER_FACTORY_DIGEST=""
-fi
-
 raise() {
 	echo "Error: $*" >&2
 	exit 1
