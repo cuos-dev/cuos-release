@@ -49,12 +49,6 @@ services:
         bind:
           create_host_path: false
       - type: bind
-        source: /etc/partition_mode
-        target: /etc/partition_mode
-        read_only: true
-        bind:
-          create_host_path: false
-      - type: bind
         source: "${SYSTEM_CONFIG_PATH:-/system.json}"
         target: /system.json
         read_only: true
