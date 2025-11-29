@@ -22,5 +22,5 @@ services:
 
 volumes:
   iac-socket:
-    external:
-      name: "iac-socket"
+    name: "iac-socket"
+    external: true
