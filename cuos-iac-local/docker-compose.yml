@@ -23,6 +23,14 @@ services:
       - type: volume
         source: iac-socket
         target: /socket
+      - type: tmpfs
+        target: /tmp
+        tmpfs:
+          size: 64M
+      - type: tmpfs
+        target: /etc/ssl/certs
+        tmpfs:
+          size: 16M
     environment:
       SYSTEM_TYPE: "local"
       SYSTEM_CONFIG_PATH: "${SYSTEM_CONFIG_PATH:-${PWD}/system.json}"
@@ -43,4 +51,3 @@ services:
 volumes:
   iac-socket:
     name: "iac-socket"
-    external: true
