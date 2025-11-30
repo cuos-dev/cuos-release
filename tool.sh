@@ -11,6 +11,34 @@ raise() {
 	exit 1
 }
 
+sign_json() {
+  if ! command -v ssh-keygen >/dev/null 2>&1; then
+    raise "ssh-keygen is required but not installed. Please install it."
+  fi
+
+  local json
+  json="$(jq \
+    --arg name "$(git config user.name)" \
+    '{
+      "name": $name,
+      "config": .,
+      "iat": now
+    }')"
+  IAC_SIGNKEY_PATH="${IAC_SIGNKEY_PATH:-"$HOME/.ssh/id_ed25519"}"
+  local ns="file"
+
+  # binary signature -> base64url (no padding)
+  b64url() { base64 -w0 | tr '+/' '-_' | tr -d '='; }
+
+  local sig_b64url
+  sig_b64url="$(printf '%s' "$json" | ssh-keygen -Y sign -f "${IAC_SIGNKEY_PATH}" -n "$ns" -q - 2>/dev/null | b64url)"
+
+  local payload_b64url
+  payload_b64url="$(printf '%s' "$json" | b64url)"
+
+  printf '%s.%s\n' "$payload_b64url" "$sig_b64url"
+}
+
 download_image() {
   local image="$1"
   local image_digest="$2"
@@ -220,6 +248,7 @@ EOF
     "update")
       "${SRC_DIR}/submodule-update.sh" || exit "$?"
       ;;
+##
 ## config    path/to/system.json[] - Show merged system configuration
     "config")
       merged_config="$("${SRC_DIR}/merge-configs.sh" "$@")" || exit 1
@@ -272,11 +301,14 @@ EOF
       ;;
 ##
 ## HELPER
-## root-password                   - Helper to create hash for os_root_admin
-    "root-password")
-      "${SRC_DIR}/create-root-password.sh" "$@"
-      ;;
+## config-sign path/to/system.json[] - Show merged and signed system configuration
+    "config-sign")
+      merged_config="$("${SRC_DIR}/merge-configs.sh" "$@")" || exit 1
+      echo >&2
 
+      echo "${merged_config}" | sign_json
+      exit
+      ;;
 ## config-encrypt-init [system.json] - Initiate config encryption
 ## config-encrypt file.ext         - Encrypt file
 ## config-decrypt file.ext         - Decrypt file
@@ -284,6 +316,11 @@ EOF
     "config-encrypt-init"|"config-encrypt"|"config-decrypt"|"config-decrypt-all")
       "${SRC_DIR}/${COMMAND}.sh" "$@"
       ;;
+## root-password                   - Helper to create hash for os_root_admin
+    "root-password")
+      "${SRC_DIR}/create-root-password.sh" "$@"
+      ;;
+
 
 # only internal api:
     "publish")
