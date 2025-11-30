@@ -20,6 +20,9 @@ services:
         target: /system.json
         bind:
           create_host_path: false
+      - type: volume
+        source: iac-socket
+        target: /socket
     environment:
       SYSTEM_TYPE: "local"
       SYSTEM_CONFIG_PATH: "${SYSTEM_CONFIG_PATH:-${PWD}/system.json}"
@@ -37,3 +40,7 @@ services:
     read_only: true
     restart: always
 
+volumes:
+  iac-socket:
+    name: "iac-socket"
+    external: true
