@@ -136,6 +136,27 @@ create_installer() {
     "${INSTALLER_FACTORY_VERSION}" || exit "$?"
 }
 
+patch_installer() {
+  local installer="$1"
+
+  local merged_config
+  merged_config="$(cat)"
+  local image_name
+  image_name="$(echo "${merged_config}" | image_name)"
+
+  mkdir -p "${OUTPUT_DIR}"
+  echo "${merged_config}" >"${OUTPUT_DIR}/${image_name}.json"
+
+  download_image "${INSTALLER_FACTORY_VERSION}" "${INSTALLER_FACTORY_DIGEST}"
+
+  docker run --rm \
+    -v "${OUTPUT_DIR}:/output" \
+    -e "IMAGE_NAME=${image_name}" \
+    --entrypoint "/patch_iso.sh" \
+    "${INSTALLER_FACTORY_VERSION}" \
+    "${installer}" || exit "$?"
+}
+
 start_iac_local() {
   local merged_config
   merged_config="$(cat)"
@@ -261,6 +282,13 @@ EOF
       echo "${merged_config}" | create_image \
         -e "OS_ARCH=$(arch || uname -m)" && \
         echo "${merged_config}" | create_installer
+      ;;
+## patch-installer installer.iso path/to/system.json[] - Patch existing ISO
+    "patch-installer")
+      installer="$1"
+      shift
+      merged_config="$("${SRC_DIR}/merge-configs.sh" "$@")" || exit 1
+      echo "${merged_config}" | patch_installer "${installer}"
       ;;
 ## image     path/to/system.json[] - Build RAW image for current arch
     "image")
