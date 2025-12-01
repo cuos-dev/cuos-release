@@ -192,7 +192,7 @@ iac_local_docker_compose() {
 start_iac_local() {
   local merged_config
   merged_config="$(cat)"
-  CONFIG_DIR="$(dirname "$1")"
+  CONFIG_DIR=$( cd -- "$( dirname -- "$1" )" &> /dev/null && pwd )
 
   IAC_COMPOSE_PROJECT_NAME="iac-$(printf '%s' "$*" | sha1sum | cut -c1-8)"
   export IAC_COMPOSE_PROJECT_NAME
@@ -213,7 +213,7 @@ start_iac_local() {
 stop_iac_local() {
   local merged_config
   merged_config="$(cat)"
-  CONFIG_DIR="$(dirname "$1")"
+  CONFIG_DIR=$( cd -- "$( dirname -- "$1" )" &> /dev/null && pwd )
 
   IAC_COMPOSE_PROJECT_NAME="iac-$(printf '%s' "$*" | sha1sum | cut -c1-8)"
   export IAC_COMPOSE_PROJECT_NAME
@@ -230,7 +230,7 @@ stop_iac_local() {
 update_iac_local() {
   local merged_config
   merged_config="$(cat)"
-  CONFIG_DIR="$(dirname "$1")"
+  CONFIG_DIR=$( cd -- "$( dirname -- "$1" )" &> /dev/null && pwd )
 
   IAC_COMPOSE_PROJECT_NAME="iac-$(printf '%s' "$*" | sha1sum | cut -c1-8)"
   export IAC_COMPOSE_PROJECT_NAME
