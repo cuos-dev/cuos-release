@@ -180,11 +180,11 @@ iac_local_docker_compose() {
   if [[ "${DEVELOPMENT:-}" == "1" ]]; then
     docker compose \
       -f "${iac_compose_file}" \
+      -f "${iac_compose_file/.yml/development.yml}" \
       "$@"
   else
     docker compose \
       -f "${iac_compose_file}" \
-      -f "${iac_compose_file/.yml/development.yml}" \
       "$@"
   fi
 }
