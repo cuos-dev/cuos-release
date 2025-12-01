@@ -190,12 +190,13 @@ iac_local_docker_compose() {
 start_iac_local() {
   local merged_config
   merged_config="$(cat)"
+  CONFIG_DIR="$(dirname "$1")"
 
   IAC_COMPOSE_PROJECT_NAME="iac-$(printf '%s' "$*" | sha1sum | cut -c1-8)"
   export IAC_COMPOSE_PROJECT_NAME
   export COMPOSE_PROJECT_NAME="local-${IAC_COMPOSE_PROJECT_NAME}"
 
-  export SYSTEM_CONFIG_PATH="${SCRIPT_DIR}/cuos-iac-local/config-${IAC_COMPOSE_PROJECT_NAME}.json"
+  export SYSTEM_CONFIG_PATH="${CONFIG_DIR}/.config-${IAC_COMPOSE_PROJECT_NAME}.json"
   echo "${merged_config}" >"${SYSTEM_CONFIG_PATH}"
 
   iac_local_download
@@ -210,12 +211,13 @@ start_iac_local() {
 stop_iac_local() {
   local merged_config
   merged_config="$(cat)"
+  CONFIG_DIR="$(dirname "$1")"
 
   IAC_COMPOSE_PROJECT_NAME="iac-$(printf '%s' "$*" | sha1sum | cut -c1-8)"
   export IAC_COMPOSE_PROJECT_NAME
   export COMPOSE_PROJECT_NAME="local-${IAC_COMPOSE_PROJECT_NAME}"
 
-  export SYSTEM_CONFIG_PATH="${SCRIPT_DIR}/cuos-iac-local/config-${IAC_COMPOSE_PROJECT_NAME}.json"
+  export SYSTEM_CONFIG_PATH="${CONFIG_DIR}/.config-${IAC_COMPOSE_PROJECT_NAME}.json"
 
   docker exec "${COMPOSE_PROJECT_NAME}-cuos-iac-1" "/api/stop" || true
 
