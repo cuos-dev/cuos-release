@@ -5,11 +5,6 @@ services:
     container_name: cuos-iac-fleet-agent
     volumes:
       - type: bind
-        source: /var/run/cuos.sock
-        target: /var/run/cuos.sock
-        bind:
-          create_host_path: false
-      - type: bind
         source: "${SYSTEM_CONFIG_PATH:-/system.json}"
         target: /system.json
         read_only: true

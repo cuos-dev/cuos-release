@@ -35,7 +35,6 @@ services:
       SYSTEM_CONFIG_PATH: "${SYSTEM_CONFIG_PATH:-${PWD}/system.json}"
       IAC_COMPOSE_PROJECT_NAME: "${IAC_COMPOSE_PROJECT_NAME:-iac-local}"
       IAC_LOCAL_SELFUPDATE: "${IAC_LOCAL_SELFUPDATE:-true}"
-      CUOS_SOCKET: "/dev/null"
     deploy:
       resources:
         limits:
