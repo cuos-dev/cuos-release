@@ -2,7 +2,6 @@ services:
   cuos-iac:
     image: "ghcr.io/cuos-dev/cuos-iac:v0.2.1"
     x-digest: "sha256:d2ab19133b126a6fdfea6d9714676f964147c7afdae12ed657058e1ad937b04e"
-    container_name: cuos-iac
     volumes:
       - type: bind
         source: "${DOCKER_CONFIG:-${HOME:-/root}/.docker}/config.json"
