@@ -17,5 +17,5 @@ services:
 
 volumes:
   iac-socket:
-    name: "iac-socket"
+    name: "${IAC_SOCKET_VOLUME:-iac-socket}"
     external: true

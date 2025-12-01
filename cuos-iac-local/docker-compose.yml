@@ -34,6 +34,7 @@ services:
       SYSTEM_TYPE: "local"
       SYSTEM_CONFIG_PATH: "${SYSTEM_CONFIG_PATH:-${PWD}/system.json}"
       IAC_COMPOSE_PROJECT_NAME: "${IAC_COMPOSE_PROJECT_NAME:-iac-local}"
+      IAC_SOCKET_VOLUME: "${IAC_SOCKET_VOLUME:-iac-socket}"
       IAC_LOCAL_SELFUPDATE: "${IAC_LOCAL_SELFUPDATE:-true}"
     deploy:
       resources:
@@ -49,4 +50,4 @@ services:
 
 volumes:
   iac-socket:
-    name: "iac-socket"
+    name: "${IAC_SOCKET_VOLUME:-iac-socket}"

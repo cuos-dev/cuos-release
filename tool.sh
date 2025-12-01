@@ -175,6 +175,8 @@ iac_local_download() {
 iac_local_docker_compose() {
   local iac_compose_file="${SCRIPT_DIR}/cuos-iac-local/docker-compose.yml"
 
+  export IAC_SOCKET_VOLUME="${COMPOSE_PROJECT_NAME}-iac-socket"
+
   if [[ "${DEVELOPMENT:-}" == "1" ]]; then
     docker compose \
       -f "${iac_compose_file}" \
