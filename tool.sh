@@ -160,25 +160,19 @@ patch_installer() {
     "${installer}" || exit "$?"
 }
 
-docker_compose_iac_env() {
-  IAC_COMPOSE_PROJECT_NAME="iac-$(printf '%s' "$*" | sha1sum | cut -c1-8)"
-  export IAC_COMPOSE_PROJECT_NAME
-  export COMPOSE_PROJECT_NAME="local-${IAC_COMPOSE_PROJECT_NAME}"
-
-  export SYSTEM_CONFIG_PATH="${SCRIPT_DIR}/cuos-iac-local/config-${IAC_COMPOSE_PROJECT_NAME}.json"
-  echo "${merged_config}" >"${SYSTEM_CONFIG_PATH}"
-
+iac_local_download() {
   local iac_compose_file="${SCRIPT_DIR}/cuos-iac-local/docker-compose.yml"
+  if [[ "${DEVELOPMENT:-}" == "1" ]]; then
+    iac_compose_file="${SCRIPT_DIR}/cuos-iac-local/docker-compose.development.yml"
+  fi
 
   local iac_version
   iac_version="$(grep "image" "${iac_compose_file}" | sed -n 's/^ *image: "//p' | sed -n 's/"$//p')"
   local iac_digest
   iac_digest="$(grep "x-digest" "${iac_compose_file}" | grep -oE 'sha256:[0-9a-f]+')"
   download_image "${iac_version}" "${iac_digest}"
-
-  docker_login "${SYSTEM_CONFIG_PATH}"
 }
-docker_compose_iac() {
+iac_local_docker_compose() {
   local iac_compose_file="${SCRIPT_DIR}/cuos-iac-local/docker-compose.yml"
 
   if [[ "${DEVELOPMENT:-}" == "1" ]]; then
@@ -197,9 +191,18 @@ start_iac_local() {
   local merged_config
   merged_config="$(cat)"
 
-  echo "${merged_config}" | docker_compose_iac_env "$@"
+  IAC_COMPOSE_PROJECT_NAME="iac-$(printf '%s' "$*" | sha1sum | cut -c1-8)"
+  export IAC_COMPOSE_PROJECT_NAME
+  export COMPOSE_PROJECT_NAME="local-${IAC_COMPOSE_PROJECT_NAME}"
 
-  docker_compose_iac \
+  export SYSTEM_CONFIG_PATH="${SCRIPT_DIR}/cuos-iac-local/config-${IAC_COMPOSE_PROJECT_NAME}.json"
+  echo "${merged_config}" >"${SYSTEM_CONFIG_PATH}"
+
+  iac_local_download
+
+  docker_login "${SYSTEM_CONFIG_PATH}"
+
+  iac_local_docker_compose \
     up -d \
     --remove-orphans \
     --pull never
@@ -208,11 +211,15 @@ stop_iac_local() {
   local merged_config
   merged_config="$(cat)"
 
-  echo "${merged_config}" | docker_compose_iac_env "$@"
+  IAC_COMPOSE_PROJECT_NAME="iac-$(printf '%s' "$*" | sha1sum | cut -c1-8)"
+  export IAC_COMPOSE_PROJECT_NAME
+  export COMPOSE_PROJECT_NAME="local-${IAC_COMPOSE_PROJECT_NAME}"
+
+  export SYSTEM_CONFIG_PATH="${SCRIPT_DIR}/cuos-iac-local/config-${IAC_COMPOSE_PROJECT_NAME}.json"
 
   docker exec "${COMPOSE_PROJECT_NAME}-cuos-iac-1" "/api/stop" || true
 
-  docker_compose_iac \
+  iac_local_docker_compose \
     down \
     --remove-orphans
 }
@@ -220,7 +227,12 @@ update_iac_local() {
   local merged_config
   merged_config="$(cat)"
 
-  echo "${merged_config}" | docker_compose_iac_env "$@"
+  IAC_COMPOSE_PROJECT_NAME="iac-$(printf '%s' "$*" | sha1sum | cut -c1-8)"
+  export IAC_COMPOSE_PROJECT_NAME
+  export COMPOSE_PROJECT_NAME="local-${IAC_COMPOSE_PROJECT_NAME}"
+
+  export SYSTEM_CONFIG_PATH="${SCRIPT_DIR}/cuos-iac-local/config-${IAC_COMPOSE_PROJECT_NAME}.json"
+  echo "${merged_config}" >"${SYSTEM_CONFIG_PATH}"
 
   docker exec "${COMPOSE_PROJECT_NAME}-cuos-iac-1" "/api/pre_update"
   exit "$?"
