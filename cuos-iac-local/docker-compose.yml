@@ -5,7 +5,7 @@ services:
     container_name: cuos-iac
     volumes:
       - type: bind
-        source: "${HOME:-/root}/.docker/config.json"
+        source: "${DOCKER_CONFIG:-${HOME:-/root}/.docker}/config.json"
         target: /root/.docker/config.json
         read_only: true
         bind:
@@ -36,6 +36,7 @@ services:
       SYSTEM_CONFIG_PATH: "${SYSTEM_CONFIG_PATH:-${PWD}/system.json}"
       IAC_COMPOSE_PROJECT_NAME: "${IAC_COMPOSE_PROJECT_NAME:-iac-local}"
       IAC_LOCAL_SELFUPDATE: "${IAC_LOCAL_SELFUPDATE:-true}"
+      CUOS_SOCKET: "/dev/null"
     deploy:
       resources:
         limits:

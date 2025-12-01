@@ -62,6 +62,11 @@ download_image() {
 }
 
 docker_login() {
+  # if docker config is read only: copy it!
+  export DOCKER_CONFIG="${PWD}/.docker"
+  mkdir -p "${DOCKER_CONFIG}"
+  jq '{auths: .auths}' "${HOME}/.docker/config.json" >"${DOCKER_CONFIG}/config.json"
+
   CONFIG_PATH="$1" "${SRC_DIR}/util-docker-login.sh" || exit "$?"
 }
 
@@ -102,13 +107,11 @@ create_image() {
   mkdir -p "${OUTPUT_DIR}"
   echo "${merged_config}" >"${OUTPUT_DIR}/${image_name}.json"
 
-  docker_login "${OUTPUT_DIR}/${image_name}.json"
-
   download_image "${IMAGE_FACTORY_VERSION}" "${IMAGE_FACTORY_DIGEST}"
 
+  docker_login "${OUTPUT_DIR}/${image_name}.json"
 
   local docker_config_local="${DOCKER_CONFIG:-"${HOME}/.docker/"}"
-
   docker run --rm \
     --pull=never \
     --privileged \
@@ -167,7 +170,6 @@ start_iac_local() {
   export SYSTEM_CONFIG_PATH="${SCRIPT_DIR}/cuos-iac-local/config-${IAC_COMPOSE_PROJECT_NAME}.json"
   echo "${merged_config}" >"${SYSTEM_CONFIG_PATH}"
 
-  docker_login "${SYSTEM_CONFIG_PATH}"
   local iac_compose_file="${SCRIPT_DIR}/cuos-iac-local/docker-compose.yml"
 
   local iac_version
@@ -175,6 +177,8 @@ start_iac_local() {
   local iac_digest
   iac_digest="$(grep "x-digest" "${iac_compose_file}" | grep -oE 'sha256:[0-9a-f]+')"
   download_image "${iac_version}" "${iac_digest}"
+
+  docker_login "${SYSTEM_CONFIG_PATH}"
 
   docker compose \
     -f "${iac_compose_file}" \
@@ -225,15 +229,6 @@ main() {
     sed() {
       gsed "$@"
     }
-  fi
-
-  # if docker config is read only: copy it!
-  if command -v findmnt >/dev/null 2>&1 && findmnt -n -o TARGET,PROPAGATION,OPTIONS "${HOME}/.docker/config.json" | grep -q '\bro\b'; then
-    export DOCKER_CONFIG="${PWD}/.docker/"
-    if [[ ! -f "${PWD}/.docker/config.json" ]]; then
-      mkdir -p "${PWD}/.docker"
-      cat "${HOME}/.docker/config.json" >"${PWD}/.docker/config.json"
-    fi
   fi
 
   # shellcheck source=/dev/null
