@@ -1,7 +1,7 @@
 services:
   cuos-iac-fleet-agent:
-    image: "ghcr.io/cuos-dev/cuos-iac-fleet-agent:v0.3.0"
-    x-digest: "sha256:528106c6e27dbe792a413fd49b6fa4afcf97bd3e4fd0bb59ead83dc69fb708a0"
+    image: "ghcr.io/cuos-dev/cuos-iac-fleet-agent:v0.3.1"
+    x-digest: "sha256:67ca7b165fbc032da88eccd7d489d575f968ead335d938c79e6221fbe48936aa"
     volumes:
       - type: bind
         source: "${SYSTEM_CONFIG_PATH:-/system.json}"
