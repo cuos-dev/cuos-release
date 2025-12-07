@@ -179,11 +179,13 @@ iac_local_docker_compose() {
 
   if [[ "${DEVELOPMENT:-}" == "1" ]]; then
     docker compose \
+      --pull=never \
       -f "${iac_compose_file}" \
       -f "${iac_compose_file/.yml/.development.yml}" \
       "$@"
   else
     docker compose \
+      --pull=never \
       -f "${iac_compose_file}" \
       "$@"
   fi
@@ -312,6 +314,7 @@ EOF
       ;;
 ## image     path/to/system.json[] - Build RAW image for current arch
     "image")
+      [[ "${DEBUG:-}" == "1"]] && set -x
       merged_config="$("${SRC_DIR}/merge-configs.sh" "$@")" || exit 1
       echo "${merged_config}" | create_image \
         -e "OS_ARCH=$(arch || uname -m)"
@@ -325,6 +328,7 @@ EOF
       ;;
 ## lxc       path/to/system.json[] - Build LXC image for x64
     "lxc")
+      [[ "${DEBUG:-}" == "1"]] && set -x
       merged_config="$("${SRC_DIR}/merge-configs.sh" "$@")" || exit 1
       echo "${merged_config}" | create_image \
         -v "/var/run/docker.sock:/var/run/docker.sock" \
