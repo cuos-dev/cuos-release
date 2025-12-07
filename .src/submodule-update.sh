@@ -55,7 +55,7 @@ git -C "${TOP_REPO_DIR}" submodule foreach --recursive '
   echo "Remote tip $remote_ref => $remote_sha"
 
   local_sha="$(git rev-parse --verify --quiet HEAD)" || local_sha=""
-  if [[ "$remote_sha" == "$local_sha" ]]; then
+  if [ "$remote_sha" == "$local_sha" ]; then
     echo "No update required."
     exit 0
   fi
