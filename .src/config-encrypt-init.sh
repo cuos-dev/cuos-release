@@ -23,6 +23,8 @@ if [[ ! -f "${CONFIG_PATH}" ]]; then
 fi
 
 system_file_password_file="${CONFIG_DIR}/system_file_password.txt"
+system_file_password_file="$(echo "${system_file_password_file}" | sed -e 's/^\.\///g')"
+
 if [[ -f "${system_file_password_file}" ]]; then
   echo "System file password existing." >&2
   exit 2
@@ -34,6 +36,7 @@ if [[ -f "${system_secrets_file}.enc" ]]; then
 fi
 
 system_secrets_file="${CONFIG_DIR}/system_secrets.json"
+system_secrets_file="$(echo "${system_secrets_file}" | sed -e 's/^\.\///g')"
 if [[ ! -f "${system_secrets_file}" ]]; then
   echo '{}' >"${system_secrets_file}"
 
