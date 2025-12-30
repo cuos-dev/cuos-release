@@ -13,8 +13,16 @@ if [[ -n "${IAC_FILE_PASSPHRASE}" ]]; then
   :
 elif [[ -f "${system_file_password_file}" ]]; then
   IAC_FILE_PASSPHRASE="$(cat "${system_file_password_file}")"
+elif [[ -f "../${system_file_password_file}" ]]; then
+  IAC_FILE_PASSPHRASE="$(cat "../${system_file_password_file}")"
+elif [[ -f "../../${system_file_password_file}" ]]; then
+  IAC_FILE_PASSPHRASE="$(cat "../../${system_file_password_file}")"
 elif [[ -f "${system_secrets_file}" ]]; then
   IAC_FILE_PASSPHRASE="$(jq -r '.system_file_password' "${system_secrets_file}")"
+elif [[ -f "../${system_secrets_file}" ]]; then
+  IAC_FILE_PASSPHRASE="$(jq -r '.system_file_password' "../${system_secrets_file}")"
+elif [[ -f "../../${system_secrets_file}" ]]; then
+  IAC_FILE_PASSPHRASE="$(jq -r '.system_file_password' "../../${system_secrets_file}")"
 else
   echo -n "Please insert iac-file-passphrase:"
   read -r IAC_FILE_PASSPHRASE
