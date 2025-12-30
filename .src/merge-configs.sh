@@ -82,16 +82,10 @@ config_filename="${order[-1]/"${git_dir}/"}"
 jq -s \
   --arg filename "${config_filename}" \
 '
-  # normalize "#include" to an array (string -> [string], others -> [])
-  map(
-    if has("#include") then
-      .["#include"] |= (if type=="string" then [.] elif type=="array" then . else [] end)
-    else .
-    end
-  )
   # now reduce (fold) the normalized inputs with recursive merge
-  | reduce .[] as $item ({}; . * $item)
+  reduce .[] as $item ({}; . * $item)
   # set the file name
   | ."__filename" = $filename
+  | del(."#include")
 ' "${order[@]}"
 
