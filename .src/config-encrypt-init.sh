@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
 jq_set() {
   # Usage: jq_set jq_expression file
   # like jq, but with inplace edit function
@@ -55,6 +57,9 @@ L="${PASSWORD_LENGTH:-"25"}"
     '.system_file_password = $pass' \
     "${system_secrets_file}"
 }
+
+# encrypt secret files:
+"${SCRIPT_DIR}/config-encrypt.sh" "${system_secrets_file}"
 
 echo "${system_file_password_file}" >>"${CONFIG_DIR}/.gitignore"
 echo "${system_secrets_file}" >>"${CONFIG_DIR}/.gitignore"
