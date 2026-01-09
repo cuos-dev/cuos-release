@@ -6,6 +6,9 @@ services:
     pid: host
     privileged: true
     volumes:
+      - type: volume
+        source: cuos-dev-container-root
+        target: /root
       - type: bind
         source: /root/.docker/config.json
         target: /root/.docker/config.json
@@ -82,3 +85,5 @@ services:
 #    profiles:
 #      - dev
 
+volumes:
+  cuos-dev-container-root:
