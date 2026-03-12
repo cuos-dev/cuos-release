@@ -1,7 +1,7 @@
 services:
   cuos-dev-container:
-    image: "ghcr.io/cuos-dev/cuos-iac-dev-container:v0.3.3"
-    x-digest: "sha256:0b87c73c4785cd36f4d9a2bb4ee8ea28af36d91f07a13fcff231e315991423d7"
+    image: "ghcr.io/cuos-dev/cuos-iac-dev-container:v0.3.4"
+    x-digest: "sha256:1ad25e15661b1363cc2f1e054f3f64d4fa3555485a0641a156db1da78c629705"
     network_mode: host
     pid: host
     privileged: true
