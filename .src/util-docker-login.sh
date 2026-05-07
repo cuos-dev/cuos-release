@@ -83,6 +83,8 @@ load_update_registry() {
   local update_registry_user
   local update_registry_password
 
+  # dont use update_registry_proxy here, because we are not yet in the
+  # target infrastructure. Thus the proxy might not be reachable.
   update_registry="$(jq -r '.update_registry' "$config_file")"
   update_registry_server="${update_registry//\/*}"
   update_registry_user="$(jq -r '.update_registry_user // .update_server_user // ""' "$config_file")"
