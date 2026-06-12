@@ -42,15 +42,12 @@ if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
   exit 2
 fi
 
-if command -v mkpasswd >/dev/null 2>&1; then
-  password_hint
-  root_hash="$(mkpasswd --method=SHA-512 --rounds=500000)"
-elif command -v openssl >/dev/null 2>&1; then
+if command -v openssl >/dev/null 2>&1; then
   password_hint
   root_hash="$(openssl rand -base64 12 | tr '+/' './' | cut -c1-16)"
   root_hash="$(openssl passwd -6 -salt "$root_hash")"
 else
-  echo "Non of the needed tools is installed. Install mkpasswd or openssl" >&2
+  echo "Needed tools are not availbale Please install openssl" >&2
   exit 1
 fi
 unset root_password
