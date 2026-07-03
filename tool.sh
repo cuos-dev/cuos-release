@@ -121,6 +121,7 @@ create_image() {
     --privileged \
     -v "${docker_config_local}/config.json":/root/.docker/config.json:ro \
     -v "${OUTPUT_DIR}:/output" \
+    -v "/var/run/docker.sock:/var/run/docker.sock" \
     -e "IMAGE_NAME=${image_name}" \
     "$@" \
     "${IMAGE_FACTORY_VERSION}" || exit "$?"
@@ -340,12 +341,18 @@ EOF
         -e "OS_ARCH=rpi-arm64" \
         -e "TARGET=rpi"
       ;;
+## rpi-arm32 path/to/system.json[] - Build RAW image for 32bit Raspberry Pi
+    "rpi-arm32")
+      merged_config="$("${SRC_DIR}/merge-configs.sh" "$@")" || exit 1
+      echo "${merged_config}" | create_image \
+        -e "OS_ARCH=rpi-arm32" \
+        -e "TARGET=rpi"
+      ;;
 ## lxc       path/to/system.json[] - Build LXC image for x64
     "lxc")
       [[ "${DEBUG:-}" == "1" ]] && set -x
       merged_config="$("${SRC_DIR}/merge-configs.sh" "$@")" || exit 1
       echo "${merged_config}" | create_image \
-        -v "/var/run/docker.sock:/var/run/docker.sock" \
         -e "OS_ARCH=lxc"
       ;;
 
