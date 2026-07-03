@@ -43,6 +43,10 @@ download_image() {
   local image="$1"
   local image_digest="$2"
 
+  if [[ "${BUILD:-}" == "1" ]]; then
+    return
+  fi
+
   if ! docker image pull "${image}"; then
     echo "Failed to pull image ${image}." >&2
     exit 1
@@ -267,6 +271,16 @@ main() {
 
     INSTALLER_FACTORY_VERSION="ghcr.io/cuos-dev/cuos-installer-factory:development"
     INSTALLER_FACTORY_DIGEST=""
+  fi
+  if [[ "${BUILD:-}" == "1" ]]; then
+    export IMAGE_FACTORY_VERSION="cuos-image-factory-build"
+    (
+      cd cuos/image-factory/ 2>/dev/null ||
+        cd ../cuos/image-factory/ 2>/dev/null ||
+        cd ../../cuos/image-factory/ 2>/dev/null ||
+	exit
+      ./build.sh
+    )
   fi
 
 

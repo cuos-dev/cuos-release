@@ -49,11 +49,15 @@ RELEASE_JSON="$(jq \
   --arg os_digest "$(digest "cuos-system")" \
   --arg rpi64_version "$(version "cuos-system-rpi-arm64")" \
   --arg rpi64_digest "$(digest "cuos-system-rpi-arm64")" \
+  --arg rpi32_version "$(version "cuos-system-rpi-arm32")" \
+  --arg rpi32_digest "$(digest "cuos-system-rpi-arm32")" \
   '
     .os_image_version = $v."cuos-system".version |
     .os_image_digest = $v."cuos-system".digest |
     ."rpi-arm64_image_version" = $v."cuos-system-rpi-arm64".version |
     ."rpi-arm64_image_digest" = $v."cuos-system-rpi-arm64".digest |
+    ."rpi-arm32_image_version" = $v."cuos-system-rpi-arm32".version |
+    ."rpi-arm32_image_digest" = $v."cuos-system-rpi-arm32".digest |
     .lxc_image_version = $v."cuos-system-lxc".version |
     .lxc_image_digest = $v."cuos-system-lxc".digest |
     .updater_image_version = $v."cuos-updater".version |
