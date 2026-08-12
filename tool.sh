@@ -102,14 +102,19 @@ image_name() {
   echo "${image_name// /-}"
 }
 
-create_image() {
+save_config() {
+  local image_name="$1"
+  shift
   local merged_config
   merged_config="$(cat)"
-  local image_name
-  image_name="$(echo "${merged_config}" | image_name)"
 
   mkdir -p "${OUTPUT_DIR}"
   echo "${merged_config}" >"${OUTPUT_DIR}/${image_name}.json"
+}
+
+create_image() {
+  local image_name="$1"
+  shift
 
   download_image "${IMAGE_FACTORY_VERSION}" "${IMAGE_FACTORY_DIGEST}"
 
@@ -316,7 +321,9 @@ EOF
 ## installer path/to/system.json[] - Build ISO based installer for current arch
     "installer")
       merged_config="$("${SRC_DIR}/merge-configs.sh" "$@")" || exit 1
-      echo "${merged_config}" | create_image \
+      image_name="$(echo "${merged_config}" | image_name)"
+      echo "${merged_config}" | save_config "${image_name}"
+      create_image "${image_name}" \
         -e "OS_ARCH=$(arch || uname -m)" && \
         echo "${merged_config}" | create_installer
       ;;
@@ -329,22 +336,30 @@ EOF
       ;;
 ## image     path/to/system.json[] - Build RAW image for current arch
     "image")
+      OS_ARCH="${OS_ARCH:-"$(arch || uname -m)"}"
       [[ "${DEBUG:-}" == "1" ]] && set -x
       merged_config="$("${SRC_DIR}/merge-configs.sh" "$@")" || exit 1
-      echo "${merged_config}" | create_image \
-        -e "OS_ARCH=$(arch || uname -m)"
+      image_name="$(echo "${merged_config}" | image_name)"
+      echo "${merged_config}" | save_config "${image_name}"
+      create_image "${image_name}" \
+        -e "OS_ARCH=${OS_ARCH}" \
+	-e "TARGET=${TARGET:-}"
       ;;
 ## rpi-arm64 path/to/system.json[] - Build RAW image for 64bit Raspberry Pi
     "rpi-arm64")
       merged_config="$("${SRC_DIR}/merge-configs.sh" "$@")" || exit 1
-      echo "${merged_config}" | create_image \
+      image_name="$(echo "${merged_config}" | image_name)"
+      echo "${merged_config}" | save_config "${image_name}"
+      create_image "${image_name}" \
         -e "OS_ARCH=rpi-arm64" \
         -e "TARGET=rpi"
       ;;
 ## rpi-arm32 path/to/system.json[] - Build RAW image for 32bit Raspberry Pi
     "rpi-arm32")
       merged_config="$("${SRC_DIR}/merge-configs.sh" "$@")" || exit 1
-      echo "${merged_config}" | create_image \
+      image_name="$(echo "${merged_config}" | image_name)"
+      echo "${merged_config}" | save_config "${image_name}"
+      create_image "${image_name}" \
         -e "OS_ARCH=rpi-arm32" \
         -e "TARGET=rpi"
       ;;
@@ -352,8 +367,32 @@ EOF
     "lxc")
       [[ "${DEBUG:-}" == "1" ]] && set -x
       merged_config="$("${SRC_DIR}/merge-configs.sh" "$@")" || exit 1
-      echo "${merged_config}" | create_image \
+      image_name="$(echo "${merged_config}" | image_name)"
+      echo "${merged_config}" | save_config "${image_name}"
+      create_image "${image_name}" \
         -e "OS_ARCH=lxc"
+      ;;
+    "image-debug-shell")
+      [[ "${DEBUG:-}" == "1" ]] && set -x
+      merged_config="$("${SRC_DIR}/merge-configs.sh" "$@")" || exit 1
+      image_name="$(echo "${merged_config}" | image_name)"
+      echo "${merged_config}" | save_config "${image_name}"
+      create_image "${image_name}" \
+        -it \
+        -e "OS_ARCH=${OS_ARCH:-}" \
+        -e "TARGET=${TARGET:-}" \
+        --entrypoint "/mount_image.sh"
+      ;;
+    "rpi-debug-shell")
+      [[ "${DEBUG:-}" == "1" ]] && set -x
+      merged_config="$("${SRC_DIR}/merge-configs.sh" "$@")" || exit 1
+      image_name="$(echo "${merged_config}" | image_name)"
+      echo "${merged_config}" | save_config "${image_name}"
+      create_image "${image_name}" \
+        -it \
+        -e "OS_ARCH=rpi-arm64" \
+        -e "TARGET=rpi" \
+        --entrypoint "/mount_image.sh"
       ;;
 
 ## start-iac-local path/to/system.json[] - Start IaC local,
