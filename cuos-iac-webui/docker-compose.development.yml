@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 services:
   cuos-iac-webui:
     image: "ghcr.io/cuos-dev/cuos-iac-webui:development"

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 
 show_help() {
   echo "Usage: tool.sh root-password [-w system.json]"
