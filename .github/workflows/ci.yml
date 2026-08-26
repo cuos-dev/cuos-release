@@ -1,0 +1,111 @@
+# SPDX-License-Identifier: Apache-2.0
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - development
+
+permissions:
+  contents: read
+
+jobs:
+  dco:
+    name: DCO sign-off
+    # Only pull requests. History predating brain decision 0008 is unsigned and
+    # is deliberately not rewritten, so checking pushes would fail on ancestors.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Every commit carries a matching Signed-off-by
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          missing=0
+          checked=0
+          # Merge commits are exempt: they carry no authored change.
+          while read -r sha; do
+            [[ -n "${sha}" ]] || continue
+            checked=$((checked + 1))
+            author="$(git log -1 --format='%aN <%aE>' "${sha}")"
+            if ! git log -1 --format='%(trailers:key=Signed-off-by,valueonly)' "${sha}" \
+                | grep -qiFx "${author}"; then
+              echo "::error::${sha:0:8} $(git log -1 --format=%s "${sha}")"
+              echo "    no Signed-off-by matching the author: ${author}"
+              missing=$((missing + 1))
+            fi
+          done < <(git rev-list --no-merges "${BASE_SHA}..${HEAD_SHA}")
+
+          if (( missing > 0 )); then
+            echo
+            echo "${missing} of ${checked} commit(s) lack a matching sign-off."
+            echo "Fix with:  git rebase --signoff ${BASE_SHA}"
+            echo "Then:      git push --force-with-lease"
+            echo "See DCO.txt and CONTRIBUTING.md."
+            exit 1
+          fi
+          echo "OK: all ${checked} commit(s) signed off."
+
+  license-headers:
+    name: SPDX license headers
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Every in-scope file carries an SPDX header
+        run: .github/scripts/spdx-headers.sh check
+
+  shellcheck:
+    name: shellcheck
+    runs-on: ubuntu-latest
+    # Not yet a gate: the existing scripts have never been linted, so the
+    # backlog is unknown. Look at a few runs, fix what it finds, then remove
+    # this line to make it blocking.
+    continue-on-error: true
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Run shellcheck
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v shellcheck >/dev/null || sudo apt-get install -y shellcheck
+          mapfile -t files < <(git ls-files '*.sh')
+          if (( ${#files[@]} == 0 )); then
+            echo "No shell scripts."
+            exit 0
+          fi
+          shellcheck --severity=warning --external-sources "${files[@]}"
+
+  tests:
+    name: Bash test suite
+    runs-on: ubuntu-latest
+    # Not yet a gate: two suites fail on missing tools (yq mikefarah v4, jv),
+    # not on defects — see brain/tasks/fix-failing-tests.md. Remove this line
+    # once those are installed here or the tests skip cleanly.
+    continue-on-error: true
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Run every *.test.sh
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! -x .pipeline-test.sh ]]; then
+            echo "No .pipeline-test.sh in this repository."
+            exit 0
+          fi
+          ./.pipeline-test.sh
