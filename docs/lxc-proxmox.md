@@ -24,6 +24,11 @@ Give the configuration an LXC image and build with `--platform lxc`:
 ./tool.sh image --platform lxc my-container.json
 ```
 
+Unlike a disk image, this one **runs** a script inside the container while
+building it. Building an LXC image for a foreign architecture therefore needs
+binfmt/QEMU emulation on the build host; same-architecture builds need nothing
+extra.
+
 The result is a gzipped tarball in `./output/`:
 
 ```sh

@@ -10,8 +10,14 @@ instead, see [Building an installer](installation.md); for a container, see
 - Docker, running and usable by your user
 - `jq`
 - Around 6 GB of free disk space
-- A build host of the **same CPU architecture as the target**. Building ARM
-  images on an x86 machine is not supported.
+
+The build host does **not** have to match the target's architecture. The OS
+image is pulled with `--platform`, exported and unpacked into the image; none of
+its binaries are executed, so an ARM image builds on an x86 machine and the other
+way round.
+
+(The one exception is the LXC target, which runs a script inside the container —
+see [LXC and Proxmox](lxc-proxmox.md).)
 
 ## Build
 

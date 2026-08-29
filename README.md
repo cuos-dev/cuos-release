@@ -17,8 +17,8 @@ the OS, start at [cuos](https://github.com/cuos-dev/cuos) instead.
 - **jq**
 - **git**
 - **ssh-keygen**, only for `config-sign`
-- Linux or macOS. Building for a different CPU architecture than the host is not
-  supported: build ARM images on an ARM machine.
+- Linux or macOS. The host does not have to match the target's architecture:
+  the OS image is unpacked into the artefact, not executed.
 - Around 6 GB of free disk space.
 
 ## Quickstart
