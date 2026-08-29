@@ -68,11 +68,11 @@ On first boot CuOS sets up its subvolumes, applies the configuration, and starts
 
 ## What you can build
 
-| Command | Result |
-|---|---|
-| `./tool.sh image CONFIG` | A raw disk image (`.img`) to write to a disk |
-| `./tool.sh installer CONFIG` | An ISO installer that installs onto the target's disk |
-| `./tool.sh image --platform lxc CONFIG` | A `tar.gz` to import as an LXC container |
+| Command | Result | Guide |
+|---|---|---|
+| `./tool.sh image CONFIG` | A raw disk image (`.img`) to write to a disk | [Building disk images](docs/building-images.md) |
+| `./tool.sh installer CONFIG` | An ISO installer that installs onto the target's disk | [Building an installer](docs/installation.md) |
+| `./tool.sh image --platform lxc CONFIG` | A `tar.gz` to import as an LXC container | [LXC and Proxmox](docs/lxc-proxmox.md) |
 
 Use `--platform` for a target other than the machine you are building on:
 
