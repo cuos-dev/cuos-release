@@ -90,9 +90,6 @@ jobs:
   tests:
     name: Bash test suite
     runs-on: ubuntu-latest
-    # Not a gate yet: the suite depends on tools this repository does not
-    # declare (yq mikefarah v4). See brain/tasks/fix-failing-tests.md.
-    continue-on-error: true
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
