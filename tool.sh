@@ -429,7 +429,9 @@ EOF
     "config-encrypt-init"|"config-encrypt"|"config-decrypt"|"config-decrypt-all")
       "${SRC_DIR}/${COMMAND}.sh" "$@"
       ;;
-## root-password                   - Helper to create hash for os_root_admin
+## root-password [-r|-c|-e] [-w system.json]
+##                                 - Create a password hash for os_root_password,
+##                                   console_password or console_expert_password
     "root-password")
       "${SRC_DIR}/create-root-password.sh" "$@"
       ;;
