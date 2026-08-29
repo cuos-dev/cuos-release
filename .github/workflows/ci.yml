@@ -97,9 +97,21 @@ jobs:
       - name: Run every *.test.sh
         shell: bash
         run: |
-          set -euo pipefail
-          if [[ ! -x .pipeline-test.sh ]]; then
-            echo "No .pipeline-test.sh in this repository."
+          set -uo pipefail
+          # git ls-files, not find: it skips node_modules, build output and
+          # anything else untracked, and it fails loudly on a broken checkout.
+          mapfile -t files < <(git ls-files '*.test.sh')
+          if (( ${#files[@]} == 0 )); then
+            echo "No test scripts in this repository."
             exit 0
           fi
-          ./.pipeline-test.sh
+          status=0
+          for file in "${files[@]}"; do
+            echo "::group::${file}"
+            if ! bash "${file}"; then
+              status=1
+              echo "::error file=${file}::${file} failed"
+            fi
+            echo "::endgroup::"
+          done
+          exit "${status}"
