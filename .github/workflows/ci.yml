@@ -69,10 +69,8 @@ jobs:
   shellcheck:
     name: shellcheck
     runs-on: ubuntu-latest
-    # Not yet a gate: the existing scripts have never been linted, so the
-    # backlog is unknown. Look at a few runs, fix what it finds, then remove
-    # this line to make it blocking.
-    continue-on-error: true
+    # Gating since 2026-08-28: every script is clean at --severity=warning in
+    # all four repositories. A new warning is a change to fix, not to absorb.
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -92,9 +90,8 @@ jobs:
   tests:
     name: Bash test suite
     runs-on: ubuntu-latest
-    # Not yet a gate: two suites fail on missing tools (yq mikefarah v4, jv),
-    # not on defects — see brain/tasks/fix-failing-tests.md. Remove this line
-    # once those are installed here or the tests skip cleanly.
+    # Not a gate yet: the suite depends on tools this repository does not
+    # declare (yq mikefarah v4). See brain/tasks/fix-failing-tests.md.
     continue-on-error: true
     steps:
       - name: Checkout repository
