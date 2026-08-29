@@ -95,9 +95,10 @@ in_scope() {
     *.test.sh) return 0 ;;
   esac
   # Test fixtures: never touch, whatever the extension. A header could change
-  # what a test compares.
+  # what a test compares. This also covers the fixture directories, whose paths
+  # contain ".test." as well - init.test.sys_class_net/eth0/address and the like.
   case "${file}" in
-    *.test.*|*/init.test.sys_class_net/*) return 1 ;;
+    *.test.*) return 1 ;;
   esac
 
   case "${file}" in
