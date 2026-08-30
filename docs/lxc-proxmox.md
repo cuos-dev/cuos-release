@@ -57,6 +57,12 @@ That gives you two ways to work:
 
 ## Proxmox VE
 
+`tool.sh` can do all of the following in one command —
+`./tool.sh proxmox-create my-container.json`, see
+[Deploying to Proxmox VE](testing-on-proxmox.md). The manual steps below are
+what it does, and what to reach for when the container is not being built by
+this tooling.
+
 ### Upload the template
 
 ```sh
@@ -100,18 +106,35 @@ not read again.
 
 ### Network
 
-Either configure the network in Proxmox and leave `network` out of
-`system.json`, or configure it in `system.json`:
+**Proxmox configures the container's network, always.** CuOS does not: inside a
+container `configure_network()` returns without touching anything, because the
+interface belongs to the host. A `network` section in `system.json` is therefore
+not applied by the container — it is ignored.
+
+That does not make it pointless to write one. `./tool.sh proxmox-create` reads it
+and hands the address to Proxmox, so the network is stated once, in the same
+file as the rest of the system:
 
 ```json
 {
   "network": [
-    { "dhcp": true }
+    {
+      "ip-address": "10.10.10.14",
+      "network-mask": "255.255.255.0",
+      "gateway": "10.10.10.1",
+      "dns-server": "10.10.10.1"
+    }
   ]
 }
 ```
 
-Do not do both.
+becomes
+
+```
+--net0 name=eth0,bridge=vmbr0,ip=10.10.10.14/24,gw=10.10.10.1,ip6=none --nameserver 10.10.10.1
+```
+
+Creating the container by hand, that translation is yours to make.
 
 ### Look inside
 
@@ -152,5 +175,5 @@ Logs: `lxc exec my-cuos -- journalctl -f`
 |---|---|
 | The container starts but nothing happens | Is `/system_init.json` present? It waits for it — `pct push` it. |
 | Docker does not start inside the container | Nesting enabled? Kernel modules available? Try privileged mode. |
-| No network | Configured in Proxmox *or* in `system.json`, not neither and not both |
+| No network | Configured on the Proxmox side? A `network` section in `system.json` is not applied inside a container — see [Network](#network) |
 | Application container not pulled | Registry credentials in the configuration, and DNS inside the container |
