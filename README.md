@@ -17,6 +17,8 @@ the OS, start at [cuos](https://github.com/cuos-dev/cuos) instead.
 - **jq**
 - **git**
 - **ssh-keygen**, only for `config-sign`
+- **ssh** and **scp**, only for the `proxmox-*` commands — which in turn need no
+  Docker
 - Linux or macOS. The host does not have to match the target's architecture:
   the OS image is unpacked into the artefact, not executed.
 - Around 6 GB of free disk space.
@@ -73,6 +75,16 @@ On first boot CuOS sets up its subvolumes, applies the configuration, and starts
 | `./tool.sh image CONFIG` | A raw disk image (`.img`) to write to a disk | [Building disk images](docs/building-images.md) |
 | `./tool.sh installer CONFIG` | An ISO installer that installs onto the target's disk | [Building an installer](docs/installation.md) |
 | `./tool.sh image --platform lxc CONFIG` | A `tar.gz` to import as an LXC container | [LXC and Proxmox](docs/lxc-proxmox.md) |
+
+To try one of them out, `tool.sh` can also put the result on a
+[Proxmox VE](https://www.proxmox.com/) host and start it:
+
+```sh
+./tool.sh proxmox-create my-system.json
+```
+
+A VM or a container, depending on the platform, with everything it needs read
+from `system.json` — see [Deploying to Proxmox VE](docs/testing-on-proxmox.md).
 
 Use `--platform` for a target other than the machine you are building on:
 
@@ -196,6 +208,7 @@ the cases that are not normal — working on CuOS itself, or on this tooling.
 | `IAC_SIGNKEY_PATH` | The SSH key `config-sign` signs with. Default `~/.ssh/id_ed25519`. |
 | `PASSWORD_LENGTH` | Length of the password `root-password -g` generates. Default `20`. |
 | `OS_ARCH` | Accepted as an older spelling of `--platform`; the option wins. Prefer the option. |
+| `PROXMOX_HOST`, `PROXMOX_VMID`, `PROXMOX_ARTEFACT` | Defaults for `--host`, `--id` and `--artefact` of the `proxmox-*` commands, for driving them from a script. The options win. See [Deploying to Proxmox VE](docs/testing-on-proxmox.md). |
 
 **`DEVELOPMENT` and `BUILD` both disable the digest check**, which is the
 integrity guarantee that a normal build gives you: every image is pinned by

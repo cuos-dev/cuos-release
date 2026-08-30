@@ -22,6 +22,13 @@ host_arch() {
 OPT_PLATFORM=""
 OPT_LAYOUT=""
 OPT_BASE=""
+OPT_HOST=""
+OPT_ID=""
+OPT_ARTEFACT=""
+OPT_REPLACE=0
+OPT_YES=0
+OPT_NO_START=0
+OPT_DRY_RUN=0
 parse_options() {
   ARGS=()
   while [[ $# -gt 0 ]]; do
@@ -53,6 +60,49 @@ parse_options() {
         OPT_BASE="${1#--base=}"
         shift
         ;;
+      --host)
+        [[ $# -ge 2 ]] || raise "--host needs a value: [user@]hostname."
+        OPT_HOST="$2"
+        shift 2
+        ;;
+      --host=*)
+        OPT_HOST="${1#--host=}"
+        shift
+        ;;
+      --id)
+        [[ $# -ge 2 ]] || raise "--id needs a value: a VMID or CTID."
+        OPT_ID="$2"
+        shift 2
+        ;;
+      --id=*)
+        OPT_ID="${1#--id=}"
+        shift
+        ;;
+      --artefact)
+        [[ $# -ge 2 ]] || raise "--artefact needs a value: iso or img."
+        OPT_ARTEFACT="$2"
+        shift 2
+        ;;
+      --artefact=*)
+        OPT_ARTEFACT="${1#--artefact=}"
+        shift
+        ;;
+      --replace)
+        OPT_REPLACE=1
+        shift
+        ;;
+      --yes|-y)
+        OPT_YES=1
+        shift
+        ;;
+      --no-start)
+        OPT_NO_START=1
+        shift
+        ;;
+      --dry-run)
+        OPT_DRY_RUN=1
+        shift
+        ;;
       --)
         shift
         ARGS+=("$@")
@@ -72,6 +122,17 @@ parse_options() {
   # Checking here also keeps "${ARGS[@]}" safe to expand under 'set -u'.
   if [[ "${#ARGS[@]}" -eq 0 ]]; then
     raise "No configuration file given. See './tool.sh help'."
+  fi
+}
+
+# The options only the proxmox-* commands take. Accepting them silently
+# elsewhere would look like they had an effect.
+reject_proxmox_options() {
+  local command="$1"
+  if [[ -n "${OPT_HOST}${OPT_ID}${OPT_ARTEFACT}" ]] ||
+     [[ "${OPT_REPLACE}${OPT_YES}${OPT_NO_START}${OPT_DRY_RUN}" != "0000" ]]; then
+    raise "--host, --id, --artefact, --replace, --yes, --no-start and --dry-run
+       are only valid for the proxmox-* commands, not for '${command}'."
   fi
 }
 
@@ -115,7 +176,9 @@ default_layout_for() {
   esac
 }
 
-resolve_platform() {
+# Which platform, without deciding on a disk layout. Enough for the commands
+# that only need to know what was built, not how to build it.
+resolve_platform_name() {
   local merged_config="$1"
 
   # OS_ARCH from the environment is honoured, but undocumented.
@@ -125,6 +188,12 @@ resolve_platform() {
   fi
   [[ -n "${PLATFORM}" ]] || PLATFORM="$(host_arch)"
   PLATFORM_OS_ARCH="${PLATFORM}"
+}
+
+resolve_platform() {
+  local merged_config="$1"
+
+  resolve_platform_name "${merged_config}"
 
   # An LXC image is a container export - no disk, no partitions, no layout.
   if [[ "${PLATFORM}" == "lxc" ]]; then
@@ -421,7 +490,9 @@ main() {
   if ! command -v jq >/dev/null 2>&1; then
     raise "jq is required but not installed. Please install jq."
   fi
-  if ! command -v docker >/dev/null 2>&1; then
+  # The proxmox-* commands deploy an artefact that has already been built, so
+  # they need ssh and not docker.
+  if [[ "${1:-}" != proxmox-* ]] && ! command -v docker >/dev/null 2>&1; then
     raise "docker is required but not installed. Please install docker."
   fi
   if [[ "$(uname)" = "Darwin" ]]; then
@@ -485,6 +556,7 @@ EOF
     "image")
       parse_options "$@"
       [[ -z "${OPT_BASE}" ]] || raise "--base is only valid for 'installer'."
+      reject_proxmox_options "image"
       [[ "${DEBUG:-}" == "1" ]] && set -x
       merged_config="$("${SRC_DIR}/merge-configs.sh" "${ARGS[@]}")" || exit 1
       resolve_platform "${merged_config}"
@@ -498,6 +570,7 @@ EOF
 ##                                 - Build an ISO installer -> output/NAME.iso
     "installer")
       parse_options "$@"
+      reject_proxmox_options "installer"
       merged_config="$("${SRC_DIR}/merge-configs.sh" "${ARGS[@]}")" || exit 1
 
       if [[ -n "${OPT_BASE}" ]]; then
@@ -545,6 +618,7 @@ EOF
 ##                                   automatically. Build the image first.
     "shell")
       parse_options "$@"
+      reject_proxmox_options "shell"
       [[ "${DEBUG:-}" == "1" ]] && set -x
       merged_config="$("${SRC_DIR}/merge-configs.sh" "${ARGS[@]}")" || exit 1
       resolve_platform "${merged_config}"
@@ -558,9 +632,58 @@ EOF
 ## name      path/to/system.json[] - Show the name the artefacts will get
     "name"|"image_name")
       parse_options "$@"
+      reject_proxmox_options "name"
       merged_config="$("${SRC_DIR}/merge-configs.sh" "${ARGS[@]}")" || exit 1
       echo "${merged_config}" | image_name
       exit
+      ;;
+
+##
+## PROXMOX  (add-on, see docs/testing-on-proxmox.md)
+## proxmox-create  [--platform P] [--host H] [--id N] [--artefact iso|img]
+##                 [--replace] [--yes] [--no-start] [--dry-run] system.json[]
+##                                 - Put an artefact from output/ on a Proxmox
+##                                   host and start it. A container for platform
+##                                   'lxc', a VM otherwise. Build it first.
+## proxmox-destroy [--host H] [--id N] [--yes] [--dry-run] system.json[]
+##                                 - Stop and destroy that guest
+## proxmox-status  [--host H] [--id N] system.json[]
+##                                 - Report whether it exists, and its state
+##
+##   --host H      [user@]hostname of the Proxmox node, reached over ssh.
+##                 May also be set as "proxmox": {"host": ...} in system.json;
+##                 there is no default.
+##   --id N        VMID/CTID to use. Default: the id of the guest already
+##                 carrying this name, else the next free one.
+##   --artefact A  Which build to deploy when both exist: iso or img.
+##   --replace     Stop and destroy an existing guest of the same name first.
+##                 Without it, an existing guest is an error.
+##   --yes, -y     Do not ask before destroying anything.
+##   --no-start    Create the guest but leave it stopped.
+##   --dry-run     Print the ssh/qm/pct commands instead of running them.
+##                 Read-only queries are still made - the commands depend on
+##                 the host's state.
+    "proxmox-create"|"proxmox-destroy"|"proxmox-status")
+      parse_options "$@"
+      [[ -z "${OPT_BASE}" ]] || raise "--base is only valid for 'installer'."
+      [[ -z "${OPT_LAYOUT}" ]] || raise "--layout has no effect here: nothing is
+       being built, and the disk layout is already in the artefact."
+      [[ "${DEBUG:-}" == "1" ]] && set -x
+      merged_config="$("${SRC_DIR}/merge-configs.sh" "${ARGS[@]}")" || exit 1
+      resolve_platform_name "${merged_config}"
+      image_name="$(echo "${merged_config}" | image_name)"
+      [[ -z "${OPT_HOST}" ]] || export PROXMOX_HOST="${OPT_HOST}"
+      [[ -z "${OPT_ID}" ]] || export PROXMOX_VMID="${OPT_ID}"
+      [[ -z "${OPT_ARTEFACT}" ]] || export PROXMOX_ARTEFACT="${OPT_ARTEFACT}"
+      echo "${merged_config}" | \
+        PLATFORM="${PLATFORM_OS_ARCH}" \
+        IMAGE_NAME="${image_name}" \
+        OUTPUT_DIR="${OUTPUT_DIR}" \
+        PROXMOX_REPLACE="${OPT_REPLACE}" \
+        PROXMOX_YES="${OPT_YES}" \
+        PROXMOX_NO_START="${OPT_NO_START}" \
+        PROXMOX_DRY_RUN="${OPT_DRY_RUN}" \
+        "${SRC_DIR}/proxmox.sh" "${COMMAND#proxmox-}"
       ;;
 
 ## start-iac-local path/to/system.json[] - Start IaC local,
