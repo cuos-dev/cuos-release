@@ -183,6 +183,25 @@ DEBUG=1 ./tool.sh image my-system.json
 `shell` mounts the image's boot and root filesystems and drops you into a shell.
 The image must have been built already.
 
+## Environment switches
+
+Everything you normally need is a command-line option. These variables exist for
+the cases that are not normal — working on CuOS itself, or on this tooling.
+
+| Variable | Effect |
+|---|---|
+| `DEBUG=1` | Trace every command (`set -x`) during `image`, `installer` and `shell`. |
+| `DEVELOPMENT=1` | Use the factories' `:development` tags instead of the versions pinned in [`.versions.env`](.versions.env), and **skip the digest check**. Also switches the IaC-local commands to `cuos-iac-local/docker-compose.development.yml`. For testing a factory change before it is released. |
+| `BUILD=1` | Build the **image** factory from source instead of pulling it, and pull nothing at all. Needs a `cuos` checkout beside, one level above, or two levels above this repository — it runs `cuos/image-factory/build.sh`. The *installer* factory is neither built nor pulled, so `installer` only works if that image is already on your machine. |
+| `IAC_SIGNKEY_PATH` | The SSH key `config-sign` signs with. Default `~/.ssh/id_ed25519`. |
+| `PASSWORD_LENGTH` | Length of the password `root-password -g` generates. Default `20`. |
+| `OS_ARCH` | Accepted as an older spelling of `--platform`; the option wins. Prefer the option. |
+
+**`DEVELOPMENT` and `BUILD` both disable the digest check**, which is the
+integrity guarantee that a normal build gives you: every image is pinned by
+digest and a mismatch is fatal. Use them while developing, not to produce an
+artefact anyone else will run.
+
 ## How the pieces fit together
 
 | Repository | Contains |
