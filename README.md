@@ -21,6 +21,11 @@ the OS, start at [cuos](https://github.com/cuos-dev/cuos) instead.
   Docker
 - Linux or macOS. The host does not have to match the target's architecture:
   the OS image is unpacked into the artefact, not executed.
+- For `image` and `installer`: **loop devices, device-mapper, and the right to
+  mount filesystems.** These belong to the host kernel, so building a disk image
+  works on a host or in a VM but **not inside an LXC container** without
+  privileged access and a good deal of configuration. `image --platform lxc`
+  needs none of it — it exports a container instead of partitioning a disk.
 - Around 6 GB of free disk space.
 
 ## Quickstart
