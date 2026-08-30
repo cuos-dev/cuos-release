@@ -2,7 +2,7 @@
 
 We welcome contributions from the community!
 
-- All contributors are expected to follow our [Code of Conduct](CODE_OF_CONDUCT.md).
+- All contributors are expected to follow our [Code of Conduct](https://github.com/cuos-dev/.github/blob/main/CODE_OF_CONDUCT.md).
 - All contributions must comply with the [Developer Certificate of Origin (DCO)](DCO.txt). This means adding a Signed-off-by line to your commits.
 - Contributions are accepted under the project's license, **Apache-2.0**, as stated in each source file's `SPDX-License-Identifier` line. You keep the copyright to your contribution.
 
@@ -61,6 +61,6 @@ We value respectful, inclusive, and constructive collaboration. Please:
   * Be kind and respectful in all interactions.
   * Use clear and concise language.
   * Provide helpful feedback and be open to receiving it.
-  * Follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+  * Follow the [Code of Conduct](https://github.com/cuos-dev/.github/blob/main/CODE_OF_CONDUCT.md).
 
 Thank you for helping make CuOS better!
