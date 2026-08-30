@@ -10,5 +10,9 @@
 	"init_image_version": "development",
 	"init_image_digest": "",
 	"iac_image_version": "development",
-	"iac_image_digest": ""
+	"iac_image_digest": "",
+	"rpi-arm32_image_version": "development",
+	"rpi-arm32_image_digest": "",
+	"orangepi-zero3_image_version": "development",
+	"orangepi-zero3_image_digest": ""
 }

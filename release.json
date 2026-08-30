@@ -6,6 +6,7 @@
   "rpi-arm64_image_version": "v0.5.7",
   "rpi-arm64_image_digest": "sha256:13ae3b2dbcde784557ee4c9b8cece6a4b3cc9e0d2d46e45387b68f8a6adfee40",
   "rpi-arm32_image": "ghcr.io/cuos-dev/cuos-system-rpi-arm32",
+  "orangepi-zero3_image": "ghcr.io/cuos-dev/cuos-system-orangepi-zero3",
   "lxc_image": "ghcr.io/cuos-dev/cuos-system-lxc",
   "lxc_image_version": "v0.5.7",
   "lxc_image_digest": "sha256:2e26b1ec50fe55c99e9a8431ddd8be90eeddd49c2d96936de9941a2af56831ec",
