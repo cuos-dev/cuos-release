@@ -422,7 +422,7 @@ main() {
     raise "jq is required but not installed. Please install jq."
   fi
   if ! command -v docker >/dev/null 2>&1; then
-    raise "jq is required but not installed. Please install jq."
+    raise "docker is required but not installed. Please install docker."
   fi
   if [[ "$(uname)" = "Darwin" ]]; then
     sed() {
