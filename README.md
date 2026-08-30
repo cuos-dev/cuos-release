@@ -26,6 +26,14 @@ the OS, start at [cuos](https://github.com/cuos-dev/cuos) instead.
   works on a host or in a VM but **not inside an LXC container** without
   privileged access and a good deal of configuration. `image --platform lxc`
   needs none of it — it exports a container instead of partitioning a disk.
+
+  The factory is given the host's `/dev`, so devices the kernel creates during
+  the build are visible to it. What it cannot do is load kernel modules — if
+  neither is loaded on the host, load them once:
+
+  ```sh
+  sudo modprobe loop dm_mod
+  ```
 - Around 6 GB of free disk space.
 
 ## Quickstart

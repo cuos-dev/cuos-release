@@ -329,9 +329,15 @@ create_image() {
   docker_login "${OUTPUT_DIR}/${image_name}.json"
 
   local docker_config_local="${DOCKER_CONFIG:-"${HOME}/.docker/"}"
+  # The host's /dev, and not the copy of it that --privileged would make at
+  # start: the factory asks the kernel for a loop device and maps partitions
+  # through device-mapper, so nodes appear *during* the build. A bind mount of
+  # devtmpfs shows them; a copy taken beforehand does not, which is why the very
+  # first build on a machine used to fail and the second to succeed.
   docker run --rm \
     --pull=never \
     --privileged \
+    -v "/dev:/dev" \
     -v "${docker_config_local}/config.json":/root/.docker/config.json:ro \
     -v "${OUTPUT_DIR}:/output" \
     -v "/var/run/docker.sock:/var/run/docker.sock" \
