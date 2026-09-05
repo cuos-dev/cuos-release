@@ -403,7 +403,9 @@ lxc_net0() {
   if [[ -n "${gateway}" && "${ip}" != "dhcp" ]]; then
     net0+=",gw=${gateway}"
   fi
-  printf '%s' "${net0},ip6=none"
+  # pct accepts an address, "auto", "dhcp" or "manual" for ip6; "manual" is the
+  # one that leaves the interface without an IPv6 configuration.
+  printf '%s' "${net0},ip6=manual"
 }
 
 # Resolvers for the container, likewise stated once. pct takes a space-separated

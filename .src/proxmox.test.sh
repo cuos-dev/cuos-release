@@ -148,7 +148,7 @@ expect_rc "mask_to_prefix: rejects nonsense" 1 fails mask_to_prefix not-a-mask
 CONFIG='{"hostname":"c","network":[{"ip-address":"10.0.0.5","network-mask":"255.255.255.0","gateway":"10.0.0.1","dns-server":"10.0.0.1"}]}'
 resolve_placement
 expect "lxc_net0: the address comes from the network section" \
-  "name=eth0,bridge=vmbr0,ip=10.0.0.5/24,gw=10.0.0.1,ip6=none" lxc_net0
+  "name=eth0,bridge=vmbr0,ip=10.0.0.5/24,gw=10.0.0.1,ip6=manual" lxc_net0
 expect "lxc_nameserver: one resolver from the network section" "10.0.0.1" \
   lxc_nameserver
 
@@ -160,7 +160,7 @@ expect "lxc_nameserver: a list becomes a space-separated one" "10.0.0.1 10.0.0.2
 CONFIG='{"hostname":"c","network":[{"dhcp":true}]}'
 resolve_placement
 expect "lxc_net0: dhcp in the network section" \
-  "name=eth0,bridge=vmbr0,ip=dhcp,ip6=none" lxc_net0
+  "name=eth0,bridge=vmbr0,ip=dhcp,ip6=manual" lxc_net0
 
 CONFIG='{"hostname":"c","network":[{"ip-address":"10.0.0.5"}]}'
 resolve_placement
@@ -169,13 +169,13 @@ expect_rc "lxc_net0: an address without a mask is an error" 1 fails lxc_net0
 CONFIG='{"hostname":"c"}'
 resolve_placement
 expect "lxc_net0: no network at all -> DHCP" \
-  "name=eth0,bridge=vmbr0,ip=dhcp,ip6=none" lxc_net0
+  "name=eth0,bridge=vmbr0,ip=dhcp,ip6=manual" lxc_net0
 expect "lxc_nameserver: nothing to say" "" lxc_nameserver
 
 CONFIG='{"hostname":"c","network":[{"ip-address":"10.0.0.5","network-mask":"255.255.255.0"}],"proxmox":{"ip":"192.168.0.9/24","gateway":"192.168.0.1","bridge":"vmbr1"}}'
 resolve_placement
 expect "lxc_net0: the proxmox keys win over the network section" \
-  "name=eth0,bridge=vmbr1,ip=192.168.0.9/24,gw=192.168.0.1,ip6=none" lxc_net0
+  "name=eth0,bridge=vmbr1,ip=192.168.0.9/24,gw=192.168.0.1,ip6=manual" lxc_net0
 
 CONFIG='{"hostname":"c","proxmox":{"ip":"10.0.0.5"}}'
 resolve_placement
@@ -211,7 +211,7 @@ resolve_target
 EXPECTED_LXC="scp /output/CuOS-my-system.tar.gz root@pve-test:/var/lib/vz/template/cache/CuOS-my-system.tar.gz
 ssh root@pve-test bash -s <<'EOS'
 set -eux
-pct create 131 local:vztmpl/CuOS-my-system.tar.gz --hostname my-system --storage local --rootfs local:20 --memory 2048 --cores 4 --net0 name=eth0,bridge=vmbr0,ip=10.0.0.5/24,gw=10.0.0.1,ip6=none --features nesting=1 --unprivileged 0 --onboot 1 --nameserver 10.0.0.1
+pct create 131 local:vztmpl/CuOS-my-system.tar.gz --hostname my-system --storage local --rootfs local:20 --memory 2048 --cores 4 --net0 name=eth0,bridge=vmbr0,ip=10.0.0.5/24,gw=10.0.0.1,ip6=manual --features nesting=1 --unprivileged 0 --onboot 1 --nameserver 10.0.0.1
 pct start 131
 EOS"
 

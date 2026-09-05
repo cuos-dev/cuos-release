@@ -131,7 +131,7 @@ file as the rest of the system:
 becomes
 
 ```
---net0 name=eth0,bridge=vmbr0,ip=10.10.10.14/24,gw=10.10.10.1,ip6=none --nameserver 10.10.10.1
+--net0 name=eth0,bridge=vmbr0,ip=10.10.10.14/24,gw=10.10.10.1,ip6=manual --nameserver 10.10.10.1
 ```
 
 Creating the container by hand, that translation is yours to make.

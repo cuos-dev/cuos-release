@@ -157,7 +157,7 @@ stated once, where the rest of the system is described:
 ```
 
 ```
---net0 name=eth0,bridge=vmbr0,ip=10.10.10.14/24,gw=10.10.10.1,ip6=none --nameserver 10.10.10.1
+--net0 name=eth0,bridge=vmbr0,ip=10.10.10.14/24,gw=10.10.10.1,ip6=manual --nameserver 10.10.10.1
 ```
 
 The first entry is the one used — a container gets one interface. `dhcp: true`
