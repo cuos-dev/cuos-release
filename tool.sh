@@ -375,7 +375,7 @@ create_image() {
     -v "/dev:/dev" \
     -v "${docker_config_local}/config.json":/root/.docker/config.json:ro \
     -v "${OUTPUT_DIR}:/output" \
-    -v "/var/run/docker.sock:/var/run/docker.sock" \
+    -v "/var/run/docker.sock:/run/cuos-docker.sock:ro" \
     -e "IMAGE_NAME=${image_name}" \
     "$@" \
     "${IMAGE_FACTORY_VERSION}" || exit "$?"
