@@ -196,7 +196,7 @@ resolve_target
 EXPECTED_VM="scp /output/CuOS-my-system.iso root@pve-test:/var/lib/vz/template/iso/CuOS-my-system.iso
 ssh root@pve-test bash -s <<'EOS'
 set -eux
-qm create 131 --name my-system --memory 2048 --cores 2 --sockets 1 --ostype l26 --net0 virtio,bridge=vmbr0 --scsihw virtio-scsi-pci --scsi0 local:32 --ide2 local:iso/CuOS-my-system.iso,media=cdrom --boot 'order=scsi0;ide2' --onboot 1
+qm create 131 --name my-system --memory 2048 --cores 2 --sockets 1 --ostype l26 --net0 virtio,bridge=vmbr0 --scsihw virtio-scsi-pci --scsi0 local:32 --ide2 local:iso/CuOS-my-system.iso,media=cdrom --boot 'order=scsi0;ide2' --agent 1 --onboot 1
 qm start 131
 EOS"
 
