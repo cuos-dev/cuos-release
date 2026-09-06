@@ -202,6 +202,14 @@ EOS"
 
 expect "create: a VM from an installer ISO" "${EXPECTED_VM}" create_trace
 
+agent_flag() {
+  trace action_create | grep -oE -- '--agent [01]'
+}
+CONFIG='{"hostname":"my-system","proxmox":{"memory":2048,"cores":2,"disk_size":32,"agent":false}}'
+resolve_target
+expect "create: proxmox.agent false leaves the guest agent off" \
+  "--agent 0" agent_flag
+
 CONFIG='{"hostname":"my-system","network":[{"ip-address":"10.0.0.5","network-mask":"255.255.255.0","gateway":"10.0.0.1","dns-server":"10.0.0.1"}],"proxmox":{"memory":2048,"cores":4,"disk_size":20}}'
 PLATFORM="lxc"
 PROXMOX_ARTEFACT=""
