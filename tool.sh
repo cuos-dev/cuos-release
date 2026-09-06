@@ -774,7 +774,7 @@ EOF
 
 # only internal api:
     "publish")
-      "${SRC_DIR}/publish/publish.sh"
+      "${SRC_DIR}/publish/publish.sh" "$@"
       ;;
 
     *)
