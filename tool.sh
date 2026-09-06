@@ -193,6 +193,13 @@ platform_has_iso_boot_path() {
   esac
 }
 
+# ...and because it exists for amd64 alone, every host has to pull and run it as
+# amd64 explicitly. Leaving it to Docker works only where the host already is
+# amd64: pulling a manifest list that has no entry for the host's platform fails
+# with "no matching manifest", it does not fall back to emulating the one entry
+# there is. An arm64 host runs it emulated and gets the same ISO.
+INSTALLER_FACTORY_PLATFORM="linux/amd64"
+
 # Which platform, without deciding on a disk layout. Enough for the commands
 # that only need to know what was built, not how to build it.
 resolve_platform_name() {
@@ -267,15 +274,26 @@ sign_json() {
 download_image() {
   local image="$1"
   local image_digest="$2"
+  # Which platform to fetch. Empty means this host's, which is what a multi-arch
+  # image wants. Naming one is for an image published for a single architecture:
+  # a manifest list with no entry for the host is a hard error, not a fallback
+  # to emulation, so the caller has to ask for the architecture that exists.
+  local platform="${3:-}"
 
   if [[ "${BUILD:-}" == "1" ]]; then
     return
   fi
 
-  if ! docker image pull "${image}"; then
+  # Spelled out rather than built as an option array: this runs under 'set -u'
+  # on macOS's bash 3.2, where expanding an empty array is an error.
+  if [[ -n "${platform}" ]]; then
+    docker image pull --platform "${platform}" "${image}"
+  else
+    docker image pull "${image}"
+  fi || {
     echo "Failed to pull image ${image}." >&2
     exit 1
-  fi
+  }
 
   local current_image_digest
   current_image_digest="$(docker image inspect --format '{{index .RepoDigests 0}}' "${image}" 2>/dev/null | cut -d'@' -f2)"
@@ -372,9 +390,11 @@ create_installer() {
   mkdir -p "${OUTPUT_DIR}"
   echo "${merged_config}" >"${OUTPUT_DIR}/${image_name}.json"
 
-  download_image "${INSTALLER_FACTORY_VERSION}" "${INSTALLER_FACTORY_DIGEST}"
+  download_image "${INSTALLER_FACTORY_VERSION}" "${INSTALLER_FACTORY_DIGEST}" \
+    "${INSTALLER_FACTORY_PLATFORM}"
 
   docker run --rm \
+    --platform "${INSTALLER_FACTORY_PLATFORM}" \
     -v "${OUTPUT_DIR}:/output" \
     -e "IMAGE_NAME=${image_name}" \
     "${INSTALLER_FACTORY_VERSION}" || exit "$?"
@@ -413,9 +433,11 @@ installer_from_base() {
   mkdir -p "${OUTPUT_DIR}"
   echo "${merged_config}" >"${OUTPUT_DIR}/${image_name}.json"
 
-  download_image "${INSTALLER_FACTORY_VERSION}" "${INSTALLER_FACTORY_DIGEST}"
+  download_image "${INSTALLER_FACTORY_VERSION}" "${INSTALLER_FACTORY_DIGEST}" \
+    "${INSTALLER_FACTORY_PLATFORM}"
 
   docker run --rm \
+    --platform "${INSTALLER_FACTORY_PLATFORM}" \
     -v "${OUTPUT_DIR}:/output" \
     -v "${base_abs}:/base.iso:ro" \
     -e "IMAGE_NAME=${image_name}" \
