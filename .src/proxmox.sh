@@ -255,6 +255,9 @@ resolve_placement() {
   MEMORY="$(cfg memory 4096)"
   DISK_SIZE="$(cfg disk_size 16)"
   ONBOOT="$(cfg_flag onboot true)"
+  # The system enables qemu-guest-agent itself when it detects KVM, so the
+  # host side can count on it answering.
+  AGENT="$(cfg_flag agent true)"
   UNPRIVILEGED="$(cfg_flag unprivileged false)"
   FEATURES="$(cfg features nesting=1)"
 }
@@ -459,6 +462,7 @@ queue_vm_from_iso() {
     --scsi0 "${STORAGE}:${DISK_SIZE}" \
     --ide2 "${TEMPLATE_STORAGE}:iso/$(basename "${ARTEFACT}"),media=cdrom" \
     --boot "order=scsi0;ide2" \
+    --agent "${AGENT}" \
     --onboot "${ONBOOT}"
 }
 
@@ -480,6 +484,7 @@ queue_vm_from_image() {
     --scsihw virtio-scsi-pci \
     --scsi0 "${STORAGE}:0,import-from=${staged}" \
     --boot "order=scsi0" \
+    --agent "${AGENT}" \
     --onboot "${ONBOOT}"
 
   queue rm -f "${staged}"

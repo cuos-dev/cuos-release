@@ -113,6 +113,7 @@ object:
 | `memory` | `4096` | MB |
 | `disk_size` | `16` | GB |
 | `onboot` | `true` | Start the guest when the *host* boots. |
+| `agent` | `true` | VM only. QEMU guest agent, which the system starts by itself on KVM. |
 | `unprivileged` | `false` | LXC only. |
 | `features` | `nesting=1` | LXC only. CuOS runs Docker inside the container and needs nesting. |
 | `ip`, `gateway`, `nameserver` | the `network` section | LXC only, see below. |
