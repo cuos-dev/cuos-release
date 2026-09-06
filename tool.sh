@@ -176,6 +176,23 @@ default_layout_for() {
   esac
 }
 
+# Which platforms can be wrapped in an ISO installer.
+#
+# The installer factory is not a cross-builder: installer-factory/prepare_iso.sh
+# runs at *image build* time and takes the kernel and the initramfs from the
+# factory container's own rootfs, so the ISO has whatever architecture that
+# container has. It is built and published for amd64 alone, which makes amd64
+# the only target with an ISO boot path.
+#
+# The build host is a separate question and does not belong in this test: an
+# arm64 host runs the amd64 factory emulated and gets the very same ISO.
+platform_has_iso_boot_path() {
+  case "$1" in
+    x86_64|amd64) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 # Which platform, without deciding on a disk layout. Enough for the commands
 # that only need to know what was built, not how to build it.
 resolve_platform_name() {
@@ -590,10 +607,10 @@ EOF
       else
         [[ "${DEBUG:-}" == "1" ]] && set -x
         resolve_platform "${merged_config}"
-        if [[ "${PLATFORM_OS_ARCH}" != "$(host_arch)" ]]; then
+        if ! platform_has_iso_boot_path "${PLATFORM_OS_ARCH}"; then
           raise "Cannot build an installer for platform '${PLATFORM}'.
-       An ISO installer is only produced for this host's architecture
-       ($(host_arch)); no other target has an ISO boot path yet.
+       An ISO installer is only produced for x86_64; no other target has an
+       ISO boot path yet.
        Use './tool.sh image --platform ${PLATFORM} ...' for a disk image."
         fi
         image_name="$(echo "${merged_config}" | image_name)"
