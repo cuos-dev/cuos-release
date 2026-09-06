@@ -16,6 +16,17 @@ host_arch() {
   arch 2>/dev/null || uname -m
 }
 
+# Create the output directory. Build artefacts are large and reproducible, so on
+# macOS the directory is marked as excluded from Time Machine. The exclusion is
+# an extended attribute on the directory itself: it needs no administrator
+# rights, but it is lost when the directory is deleted, hence it is set here.
+make_output_dir() {
+  mkdir -p "${OUTPUT_DIR}"
+  if command -v tmutil >/dev/null 2>&1; then
+    tmutil addexclusion "${OUTPUT_DIR}" >/dev/null 2>&1 || true
+  fi
+}
+
 # Split the options out of the argument list. Whatever is left
 # is the list of configuration files, and is returned in the global ARGS array
 # so that the caller can pass it to merge-configs.sh unchanged.
@@ -351,7 +362,7 @@ save_config() {
   local merged_config
   merged_config="$(cat)"
 
-  mkdir -p "${OUTPUT_DIR}"
+  make_output_dir
   echo "${merged_config}" >"${OUTPUT_DIR}/${image_name}.json"
 }
 
@@ -387,7 +398,7 @@ create_installer() {
   local image_name
   image_name="$(echo "${merged_config}" | image_name)"
 
-  mkdir -p "${OUTPUT_DIR}"
+  make_output_dir
   echo "${merged_config}" >"${OUTPUT_DIR}/${image_name}.json"
 
   download_image "${INSTALLER_FACTORY_VERSION}" "${INSTALLER_FACTORY_DIGEST}" \
@@ -430,7 +441,7 @@ installer_from_base() {
        './tool.sh name ${ARGS[*]}' shows the name that will be used."
   fi
 
-  mkdir -p "${OUTPUT_DIR}"
+  make_output_dir
   echo "${merged_config}" >"${OUTPUT_DIR}/${image_name}.json"
 
   download_image "${INSTALLER_FACTORY_VERSION}" "${INSTALLER_FACTORY_DIGEST}" \
