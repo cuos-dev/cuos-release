@@ -32,6 +32,10 @@ ask rather than assume:
 ./tool.sh name path/to/system.json      # -> CuOS-my-system
 ```
 
+Beside it, `./output/NAME.build.log` holds the full technical output of the
+run — the build prints only a line per step. See
+[Debugging a build](../README.md#debugging-a-build).
+
 ### For another platform
 
 ```sh

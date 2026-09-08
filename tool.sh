@@ -7,13 +7,92 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 SRC_DIR="${SCRIPT_DIR}/.src"
 OUTPUT_DIR="${PWD}/output"
 
+# shellcheck source=.src/log.sh
+source "${SRC_DIR}/log.sh"
+
 raise() {
-	echo "Error: $*" >&2
+	set +x
+	log_tail
+	log_error "$*"
 	exit 1
 }
+trap log_trap_exit EXIT
 
 host_arch() {
   arch 2>/dev/null || uname -m
+}
+
+# Run a factory container. Its output is split on the step marker: the step
+# lines the factory marks go to the terminal, indented, and everything else into
+# the log. The factories themselves do nothing but print the marker - the whole
+# separation happens here, which is why an older factory image, which marks
+# nothing at all, is quiet too rather than only once its digest has been bumped
+# in .versions.env.
+#
+# Nothing is piped while no log is open: that is './tool.sh shell', whose
+# container is interactive.
+run_factory() {
+  if [[ -z "$(log_path)" ]]; then
+    docker run "$@"
+    return "$?"
+  fi
+
+  # Tracing off for the loop below, and restored afterwards. It reads every line
+  # the factory produces, so tracing it would write several lines of its own per
+  # line of build output - and bury the build output in the log it is meant to
+  # be readable in.
+  local trace_was_on=""
+  case "$-" in
+    *x*) trace_was_on=1 ;;
+  esac
+  set +x
+
+  # 2>&1 into the pipe: the factories trace to stderr, and docker's own failures
+  # arrive there too - both belong in the log rather than on the terminal.
+  # 'pipefail' is set, so the status is the container's, not the loop's, and the
+  # loop itself cannot fail the way 'grep' would on a factory that marks
+  # nothing.
+  docker run "$@" 2>&1 | while IFS= read -r line; do
+    if log_is_step_line "${line}"; then
+      nested_step "${line}"
+    else
+      printf '%s\n' "${line}"
+    fi
+  done
+  local rc="$?"
+
+  # Restored only on success. A failed build is on its way out, and the few
+  # traced lines it would still produce - the return, the exit, the trap - are
+  # the last thing written to the log, and would be what the tail shows instead
+  # of the cause.
+  if [[ -n "${trace_was_on}" && "${rc}" == "0" ]]; then
+    set -x
+  fi
+  return "${rc}"
+}
+
+# Open the log for a build: one file per artefact name, beside the artefact.
+# Truncated, because it describes this run - the run before it is not the one
+# anybody is looking for. An 'installer' build writes both of its halves here,
+# under the one name.
+start_build_log() {
+  local image_name="$1"
+  shift
+
+  make_output_dir
+
+  local path="${OUTPUT_DIR}/${image_name}.build.log"
+  if [[ "${DEBUG:-}" != "1" ]]; then
+    : >"${path}" 2>/dev/null || true
+  fi
+  log_init "${path}" "tool.sh $*"
+
+  # Tracing where it has somewhere to go: into the log, or onto the terminal
+  # because DEBUG=1 asked for it. Without either it would be the very noise this
+  # is about.
+  if [[ -n "$(log_path)" || "${DEBUG:-}" == "1" ]]; then
+    set -x
+  fi
 }
 
 # Create the output directory. Build artefacts are large and reproducible, so on
@@ -295,16 +374,19 @@ download_image() {
     return
   fi
 
+  step "Fetching ${image}"
+
+  # No --quiet: docker's progress writer is terminal-aware, and with the output
+  # in the log file it already prints one plain line per layer rather than an
+  # animation. Quietening it would only cost the log.
+  #
   # Spelled out rather than built as an option array: this runs under 'set -u'
   # on macOS's bash 3.2, where expanding an empty array is an error.
   if [[ -n "${platform}" ]]; then
     docker image pull --platform "${platform}" "${image}"
   else
     docker image pull "${image}"
-  fi || {
-    echo "Failed to pull image ${image}." >&2
-    exit 1
-  }
+  fi || raise "Failed to pull image ${image}."
 
   local current_image_digest
   current_image_digest="$(docker image inspect --format '{{index .RepoDigests 0}}' "${image}" 2>/dev/null | cut -d'@' -f2)"
@@ -315,8 +397,7 @@ download_image() {
   if [[ -n "${current_image_digest}" && "${current_image_digest}" = "${image_digest}" ]]; then
     return 0
   fi
-  echo "Security: Digest check failed for image ${image}."
-  exit 1
+  raise "Security: Digest check failed for image ${image}."
 }
 
 docker_login() {
@@ -380,7 +461,7 @@ create_image() {
   # through device-mapper, so nodes appear *during* the build. A bind mount of
   # devtmpfs shows them; a copy taken beforehand does not, which is why the very
   # first build on a machine used to fail and the second to succeed.
-  docker run --rm \
+  run_factory --rm \
     --pull=never \
     --privileged \
     -v "/dev:/dev" \
@@ -404,7 +485,7 @@ create_installer() {
   download_image "${INSTALLER_FACTORY_VERSION}" "${INSTALLER_FACTORY_DIGEST}" \
     "${INSTALLER_FACTORY_PLATFORM}"
 
-  docker run --rm \
+  run_factory --rm \
     --platform "${INSTALLER_FACTORY_PLATFORM}" \
     -v "${OUTPUT_DIR}:/output" \
     -e "IMAGE_NAME=${image_name}" \
@@ -441,13 +522,14 @@ installer_from_base() {
        './tool.sh name ${ARGS[*]}' shows the name that will be used."
   fi
 
-  make_output_dir
+  start_build_log "${image_name}" "installer --base ${base}"
   echo "${merged_config}" >"${OUTPUT_DIR}/${image_name}.json"
 
   download_image "${INSTALLER_FACTORY_VERSION}" "${INSTALLER_FACTORY_DIGEST}" \
     "${INSTALLER_FACTORY_PLATFORM}"
 
-  docker run --rm \
+  step "Deriving the installer from ${base}"
+  run_factory --rm \
     --platform "${INSTALLER_FACTORY_PLATFORM}" \
     -v "${OUTPUT_DIR}:/output" \
     -v "${base_abs}:/base.iso:ro" \
@@ -455,6 +537,8 @@ installer_from_base() {
     --entrypoint "/patch_iso.sh" \
     "${INSTALLER_FACTORY_VERSION}" \
     "/base.iso" || exit "$?"
+
+  step "output/${image_name}.iso written in $(log_elapsed "${SECONDS}")"
 }
 
 iac_local_download() {
@@ -613,20 +697,31 @@ EOF
       parse_options "$@"
       [[ -z "${OPT_BASE}" ]] || raise "--base is only valid for 'installer'."
       reject_proxmox_options "image"
-      [[ "${DEBUG:-}" == "1" ]] && set -x
+      step "Merging the configuration"
       merged_config="$("${SRC_DIR}/merge-configs.sh" "${ARGS[@]}")" || exit 1
       resolve_platform "${merged_config}"
       image_name="$(echo "${merged_config}" | image_name)"
+      start_build_log "${image_name}" "${COMMAND}" "$@"
       echo "${merged_config}" | save_config "${image_name}"
+      step "Building the system image for '${PLATFORM}'"
       create_image "${image_name}" \
         -e "OS_ARCH=${PLATFORM_OS_ARCH}" \
         -e "TARGET=${PLATFORM_TARGET}"
+      # The closing line is this script's, not the factory's: the path a person
+      # can use is the one relative to where they are standing, and the time is
+      # the whole run's rather than the container's part of it.
+      artefact="output/${image_name}.img"
+      if [[ "${PLATFORM_OS_ARCH}" == "lxc" ]]; then
+        artefact="output/${image_name}.tar.gz"
+      fi
+      step "${artefact} written in $(log_elapsed "${SECONDS}")"
       ;;
 ## installer [--platform P] [--layout L] [--base existing.iso] system.json[]
 ##                                 - Build an ISO installer -> output/NAME.iso
     "installer")
       parse_options "$@"
       reject_proxmox_options "installer"
+      step "Merging the configuration"
       merged_config="$("${SRC_DIR}/merge-configs.sh" "${ARGS[@]}")" || exit 1
 
       if [[ -n "${OPT_BASE}" ]]; then
@@ -638,7 +733,6 @@ EOF
        determined by the base ISO."
         echo "${merged_config}" | installer_from_base "${OPT_BASE}"
       else
-        [[ "${DEBUG:-}" == "1" ]] && set -x
         resolve_platform "${merged_config}"
         if ! platform_has_iso_boot_path "${PLATFORM_OS_ARCH}"; then
           raise "Cannot build an installer for platform '${PLATFORM}'.
@@ -647,10 +741,14 @@ EOF
        Use './tool.sh image --platform ${PLATFORM} ...' for a disk image."
         fi
         image_name="$(echo "${merged_config}" | image_name)"
+        start_build_log "${image_name}" "${COMMAND}" "$@"
         echo "${merged_config}" | save_config "${image_name}"
+        step "Building the system image for '${PLATFORM}'"
         create_image "${image_name}" \
           -e "OS_ARCH=${PLATFORM_OS_ARCH}" && \
+          step "Building the installer" && \
           echo "${merged_config}" | create_installer
+        step "output/${image_name}.iso written in $(log_elapsed "${SECONDS}")"
       fi
       ;;
 ##

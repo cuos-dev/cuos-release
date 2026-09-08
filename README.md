@@ -200,6 +200,25 @@ See [`cuos-iac-local/README.md`](cuos-iac-local/README.md).
 
 ## Debugging a build
 
+`image` and `installer` print one line per step and keep the technical output —
+`debootstrap`, `kpartx`, `xorriso`, the command tracing of every script
+involved — in a log file beside the artefact:
+
+```
+==> Merging the configuration
+==> Building the system image for 'x86_64'
+==> Fetching ghcr.io/cuos-dev/cuos-image-factory:v0.5.7
+  ==> Creating an empty image of 1636 MB
+  ==> Installing the system from ghcr.io/cuos-dev/cuos-system:v0.6.0
+==> output/CuOS-my-system.img written in 4m12s
+```
+
+The indented lines come from the factory container, and appear once the pinned
+factory image is one that marks its steps. The log is `output/NAME.build.log`,
+written on every run and not only on a failure, and a build that fails prints
+the end of it together with its path. `NAME` is what
+`./tool.sh name my-system.json` reports.
+
 ```sh
 ./tool.sh shell my-system.json      # shell inside the built image
 DEBUG=1 ./tool.sh image my-system.json
@@ -208,6 +227,8 @@ DEBUG=1 ./tool.sh image my-system.json
 `shell` mounts the image's boot and root filesystems and drops you into a shell.
 The image must have been built already.
 
+`DEBUG=1` puts everything on the terminal instead, and writes no log file.
+
 ## Environment switches
 
 Everything you normally need is a command-line option. These variables exist for
@@ -215,7 +236,7 @@ the cases that are not normal — working on CuOS itself, or on this tooling.
 
 | Variable | Effect |
 |---|---|
-| `DEBUG=1` | Trace every command (`set -x`) during `image`, `installer` and `shell`. |
+| `DEBUG=1` | Put the full output of `image`, `installer` and `shell` on the terminal — command tracing (`set -x`) here and inside the factory containers included — and write no `output/NAME.build.log`. |
 | `DEVELOPMENT=1` | Use the factories' `:development` tags instead of the versions pinned in [`.versions.env`](.versions.env), and **skip the digest check**. Also switches the IaC-local commands to `cuos-iac-local/docker-compose.development.yml`. For testing a factory change before it is released. |
 | `BUILD=1` | Build the **image** factory from source instead of pulling it, and pull nothing at all. Needs a `cuos` checkout beside, one level above, or two levels above this repository — it runs `cuos/image-factory/build.sh`. The *installer* factory is neither built nor pulled, so `installer` only works if that image is already on your machine. |
 | `IAC_SIGNKEY_PATH` | The SSH key `config-sign` signs with. Default `~/.ssh/id_ed25519`. |
