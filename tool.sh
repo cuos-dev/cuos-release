@@ -731,7 +731,7 @@ EOF
         [[ -z "${OPT_PLATFORM}" ]] || raise \
           "--platform cannot be combined with --base: the platform is
        determined by the base ISO."
-        echo "${merged_config}" | installer_from_base "${OPT_BASE}"
+        echo "${merged_config}" | installer_from_base "${OPT_BASE}" || exit "$?"
       else
         resolve_platform "${merged_config}"
         if ! platform_has_iso_boot_path "${PLATFORM_OS_ARCH}"; then
@@ -744,10 +744,13 @@ EOF
         start_build_log "${image_name}" "${COMMAND}" "$@"
         echo "${merged_config}" | save_config "${image_name}"
         step "Building the system image for '${PLATFORM}'"
-        create_image "${image_name}" \
-          -e "OS_ARCH=${PLATFORM_OS_ARCH}" && \
-          step "Building the installer" && \
-          echo "${merged_config}" | create_installer
+        create_image "${image_name}" -e "OS_ARCH=${PLATFORM_OS_ARCH}"
+        step "Building the installer"
+        # The configuration reaches the factory through a pipe, so
+        # create_installer runs in a subshell and its 'exit' ends that subshell
+        # alone. The status has to be caught here, or the closing line below
+        # announces an ISO that was never written.
+        echo "${merged_config}" | create_installer || exit "$?"
         step "output/${image_name}.iso written in $(log_elapsed "${SECONDS}")"
       fi
       ;;
