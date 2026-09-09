@@ -200,6 +200,24 @@ state is still there.
 
 `proxmox-status` is step 1 alone. `proxmox-destroy` is steps 1 and 3.
 
+### What you see of it
+
+`proxmox-create` and `proxmox-destroy` print step lines and keep the rest —
+`scp`'s progress, the script sent to the host together with its tracing, and
+`qm`'s import output — in `output/NAME.proxmox.log`:
+
+```
+==> Uploading CuOS-test-box.img (1636 MB) to root@pve-1
+==> Creating qm 131 ('test-box') on root@pve-1
+==> Created and started qm 131 ('test-box') on root@pve-1.
+```
+
+The log is truncated on every run, and a failing run prints the end of it
+together with its path. `DEBUG=1` puts everything on the terminal instead and
+writes no log; `--dry-run` writes none either.
+
+`proxmox-status` is unchanged: one line on stdout, for a caller to read.
+
 ### Seeing what it would do
 
 `--dry-run` prints the `scp` and the script instead of running them:

@@ -20,6 +20,12 @@
 #
 # The keys it reads and what they default to: docs/testing-on-proxmox.md.
 #
+# Output follows the same convention as a build (decision 0013): a few step
+# lines on the terminal, and the technical output - scp's progress, the script
+# sent to the host together with its tracing, qm's import - in
+# output/NAME.proxmox.log. DEBUG=1 puts all of it on the terminal and writes no
+# log, --dry-run opens none either: printing the commands is what it is for.
+#
 # One run makes three ssh channels over a single multiplexed connection: it
 # reads the host's state, uploads the artefact, and sends every mutating command
 # as one script. The decisions in between - which id, does it exist, may it be
@@ -27,6 +33,11 @@
 # owner can be asked before anything is destroyed.
 
 set -euo pipefail
+
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
+# shellcheck source=.src/log.sh
+source "${SCRIPT_DIR}/log.sh"
 
 PLATFORM="${PLATFORM:-}"
 IMAGE_NAME="${IMAGE_NAME:-}"
@@ -37,7 +48,9 @@ NO_START="${PROXMOX_NO_START:-0}"
 DRY_RUN="${PROXMOX_DRY_RUN:-0}"
 
 raise() {
-  echo "Error: $*" >&2
+  set +x
+  log_tail
+  log_error "$*"
   exit 1
 }
 
@@ -131,6 +144,9 @@ ssh_to() {
 
 upload() {
   local target="$1"
+  step "Uploading $(basename "${ARTEFACT}") ($(( $(artefact_bytes) / 1024 / 1024 )) MB) to ${HOST}"
+  # The command line stays on stderr: in the log it says what the progress
+  # below belongs to, and under --dry-run it is the pastable form of it.
   echo "scp ${ARTEFACT} ${HOST}:${target}" >&2
   if [[ "${DRY_RUN}" == "1" ]]; then
     return 0
@@ -173,7 +189,17 @@ run_batch() {
   } >&2
 
   if [[ "${DRY_RUN}" != "1" ]]; then
-    batch_script | ssh_to bash -s
+    # The failure is named here rather than left to 'set -e': with the output in
+    # a log, a batch that dies silently leaves a person with step lines and
+    # nothing else. raise turns the tracing off before it prints the tail, so
+    # the last line of that tail is the command that failed.
+    local rc=0
+    batch_script | ssh_to bash -s || rc="$?"
+    if [[ "${rc}" != "0" ]]; then
+      raise "${HOST} stopped at one of the ${CLI} commands (exit ${rc}); the
+       lines above are the end of the log. The batch runs under 'set -e', so
+       what follows the failing command was not carried out."
+    fi
   fi
   BATCH=()
 }
@@ -187,8 +213,11 @@ confirm() {
     raise "$1
        There is no terminal to ask on. Pass --yes to answer in advance."
   fi
+  # The prompt goes to the saved terminal rather than to stderr, which a log
+  # takes over.
   local answer
-  read -r -p "$1 [y/N] " answer </dev/tty
+  printf '%s [y/N] ' "$1" >&4
+  read -r answer </dev/tty
   [[ "${answer}" == [Yy] || "${answer}" == [Yy][Ee][Ss] ]]
 }
 
@@ -574,12 +603,13 @@ action_create() {
     queue "${CLI}" start "${VMID}"
   fi
 
+  step "Creating ${CLI} ${VMID} ('${GUEST_NAME}') on ${HOST}"
   run_batch
 
   if [[ "${NO_START}" == "1" ]]; then
-    echo "Created ${CLI} ${VMID} ('${GUEST_NAME}'), not started (--no-start)."
+    step "Created ${CLI} ${VMID} ('${GUEST_NAME}'), not started (--no-start)."
   else
-    echo "Created and started ${CLI} ${VMID} ('${GUEST_NAME}') on ${HOST}."
+    step "Created and started ${CLI} ${VMID} ('${GUEST_NAME}') on ${HOST}."
   fi
 }
 
@@ -596,7 +626,7 @@ action_destroy() {
     || raise "Aborted; nothing was changed."
   queue_destroy "${existing}"
   run_batch
-  echo "Destroyed ${CLI} ${existing} on ${HOST}."
+  step "Destroyed ${CLI} ${existing} on ${HOST}."
 }
 
 action_status() {
@@ -620,6 +650,34 @@ build_hint() {
   esac
 }
 
+# One log per run, beside the artefact and named after it, on the same
+# convention as a build. Not opened for 'status', whose single line is meant to
+# be read or captured by the caller, and not under --dry-run.
+start_proxmox_log() {
+  local action="$1"
+
+  case "${action}" in
+    create|destroy) ;;
+    *) return 0 ;;
+  esac
+  [[ "${DRY_RUN}" != "1" ]] || return 0
+
+  local path="${OUTPUT_DIR}/${IMAGE_NAME:-${GUEST_NAME}}.proxmox.log"
+  if [[ "${DEBUG:-}" != "1" ]]; then
+    mkdir -p "${OUTPUT_DIR}" 2>/dev/null || true
+    # Truncated: the log describes this run, and the run before it is not the
+    # one anybody is looking for.
+    : >"${path}" 2>/dev/null || true
+  fi
+  log_init "${path}" "proxmox.sh ${action}"
+
+  # Tracing where it has somewhere to go: into the log, or onto the terminal
+  # because DEBUG=1 asked for it.
+  if [[ -n "$(log_path)" || "${DEBUG:-}" == "1" ]]; then
+    set -x
+  fi
+}
+
 main() {
   local action="${1:-}"
 
@@ -629,9 +687,10 @@ main() {
   [[ -n "${CONFIG}" ]] || raise "No configuration on stdin. Run this through tool.sh."
 
   resolve_target
+  start_proxmox_log "${action}"
 
   ssh_control_start
-  trap ssh_control_stop EXIT
+  trap 'log_trap_exit; ssh_control_stop' EXIT
 
   case "${action}" in
     create) action_create ;;

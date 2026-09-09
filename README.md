@@ -229,6 +229,10 @@ The image must have been built already.
 
 `DEBUG=1` puts everything on the terminal instead, and writes no log file.
 
+`proxmox-create` and `proxmox-destroy` follow the same convention, with their
+log in `output/NAME.proxmox.log` —
+[Deploying to Proxmox VE](docs/testing-on-proxmox.md#what-you-see-of-it).
+
 ## Environment switches
 
 Everything you normally need is a command-line option. These variables exist for
@@ -236,7 +240,7 @@ the cases that are not normal — working on CuOS itself, or on this tooling.
 
 | Variable | Effect |
 |---|---|
-| `DEBUG=1` | Put the full output of `image`, `installer` and `shell` on the terminal — command tracing (`set -x`) here and inside the factory containers included — and write no `output/NAME.build.log`. |
+| `DEBUG=1` | Put the full output of `image`, `installer`, `shell` and the `proxmox-*` commands on the terminal — command tracing (`set -x`) here, inside the factory containers and on the Proxmox host included — and write no `output/NAME.build.log` or `output/NAME.proxmox.log`. |
 | `DEVELOPMENT=1` | Use the factories' `:development` tags instead of the versions pinned in [`.versions.env`](.versions.env), and **skip the digest check**. Also switches the IaC-local commands to `cuos-iac-local/docker-compose.development.yml`. For testing a factory change before it is released. |
 | `BUILD=1` | Build the **image** factory from source instead of pulling it, and pull nothing at all. Needs a `cuos` checkout beside, one level above, or two levels above this repository — it runs `cuos/image-factory/build.sh`. The *installer* factory is neither built nor pulled, so `installer` only works if that image is already on your machine. |
 | `IAC_SIGNKEY_PATH` | The SSH key `config-sign` signs with. Default `~/.ssh/id_ed25519`. |
