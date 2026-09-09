@@ -111,7 +111,7 @@ object:
 | `bridge` | `vmbr0` | |
 | `cores` | `2` | |
 | `memory` | `4096` | MB |
-| `disk_size` | `16` | GB |
+| `disk_size` | `16` | GB. A RAW image is imported at its own size (1636 MB) and then grown to this, so that `/data` has room for the application images; a value below the image's size is ignored. |
 | `onboot` | `true` | Start the guest when the *host* boots. |
 | `agent` | `true` | VM only. QEMU guest agent, which the system starts by itself on KVM. |
 | `unprivileged` | `false` | LXC only. |
@@ -187,7 +187,7 @@ authentication rather than one per command:
    files.
 2. **The upload** of the artefact (`scp`, over the same connection).
 3. **One script** with every mutating command — `stop`, `destroy`, `create`,
-   `start` as applicable — run under `set -eux` on the far side.
+   `disk resize`, `start` as applicable — run under `set -eux` on the far side.
 
 The decisions in between are made locally, which is what makes step 3 a single
 batch: by then it is settled which id to use, whether a guest of this name
@@ -255,6 +255,7 @@ Both guests exist side by side, each found by its own name.
 | `Could not read the state of …` | Step 1 failed: ssh reachable, may that user run `pvesh`, and does `template_storage` exist? |
 | `Storage 'x' has no filesystem path` | An ISO or template needs a directory storage. Point `template_storage` at one (usually `local`). |
 | `unknown option --import-from` | Proxmox VE 7. Deploy an ISO instead of a RAW image, or upgrade. |
+| The guest boots but `no space left on device` while it pulls its application image | `proxmox.disk_size`, and that the guest's disk really has that size (`qm config ID`). The image is 1636 MB and leaves `/data` almost nothing; the grow is what makes room. |
 | The container starts but nothing happens | It is waiting for `/system_init.json` — see [LXC and Proxmox](lxc-proxmox.md#how-the-container-gets-its-configuration). |
 
 ## See also

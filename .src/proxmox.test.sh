@@ -202,6 +202,44 @@ EOS"
 
 expect "create: a VM from an installer ISO" "${EXPECTED_VM}" create_trace
 
+CONFIG='{"hostname":"my-system","proxmox":{"memory":2048,"cores":2,"disk_size":20}}'
+PROXMOX_ARTEFACT="img"
+resolve_target
+# 1636 MB, the size the image factory writes for x86_64. The disk the import
+# creates is exactly this large, and the grow is what gives /data room for an
+# application image.
+dd if=/dev/zero of="${TMP}/CuOS-my-system.img" bs=1M count=1 seek=1635 \
+  status=none
+
+EXPECTED_IMG="scp /output/CuOS-my-system.img root@pve-test:/var/tmp/CuOS-my-system.img
+ssh root@pve-test bash -s <<'EOS'
+set -eux
+qm create 131 --name my-system --memory 2048 --cores 2 --sockets 1 --ostype l26 --net0 virtio,bridge=vmbr0 --scsihw virtio-scsi-pci --scsi0 local:0,import-from=/var/tmp/CuOS-my-system.img --boot order=scsi0 --agent 1 --onboot 1
+qm disk resize 131 scsi0 20G
+rm -f /var/tmp/CuOS-my-system.img
+qm start 131
+EOS"
+
+expect "create: a VM from a disk image, grown to disk_size" "${EXPECTED_IMG}" \
+  create_trace
+
+resize_line() {
+  trace action_create | grep -E "^qm disk resize" || true
+}
+CONFIG='{"hostname":"my-system","proxmox":{"memory":2048,"cores":2,"disk_size":1}}'
+resolve_target
+expect "create: a disk_size below the image's own size is not a shrink" \
+  "" resize_line
+
+CONFIG='{"hostname":"my-system","proxmox":{"disk_size":"20G"}}'
+resolve_target
+expect_rc "resolve_placement: disk_size must be a number of GB" 1 \
+  fails resolve_placement
+
+CONFIG='{"hostname":"my-system","proxmox":{"memory":2048,"cores":2,"disk_size":32}}'
+PROXMOX_ARTEFACT="iso"
+resolve_target
+
 agent_flag() {
   trace action_create | grep -oE -- '--agent [01]'
 }

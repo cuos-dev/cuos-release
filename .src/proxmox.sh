@@ -244,6 +244,14 @@ resolve_artefact() {
   ARTEFACT="${OUTPUT_DIR}/${IMAGE_NAME}.${ARTEFACT_KIND}"
 }
 
+# The artefact's size in bytes. 'wc -c' on a regular file needs no stat(1),
+# whose flags differ between GNU and BSD, and reads nothing.
+artefact_bytes() {
+  local bytes
+  bytes="$(wc -c <"${ARTEFACT}")"
+  printf '%s' "${bytes//[[:space:]]/}"
+}
+
 resolve_placement() {
   STORAGE="$(cfg storage local)"
   # Only a directory-backed storage can hold an ISO or a container template, and
@@ -254,6 +262,10 @@ resolve_placement() {
   CORES="$(cfg cores 2)"
   MEMORY="$(cfg memory 4096)"
   DISK_SIZE="$(cfg disk_size 16)"
+  # A plain number of GB, because it is also used as an operand below and both
+  # 'qm' spellings of a volume take a bare number.
+  [[ "${DISK_SIZE}" =~ ^[0-9]+$ ]] \
+    || raise "proxmox.disk_size must be a whole number of GB, not '${DISK_SIZE}'."
   ONBOOT="$(cfg_flag onboot true)"
   # The system enables qemu-guest-agent itself when it detects KVM, so the
   # host side can count on it answering.
@@ -486,6 +498,22 @@ queue_vm_from_image() {
     --boot "order=scsi0" \
     --agent "${AGENT}" \
     --onboot "${ONBOOT}"
+
+  # import-from makes the disk exactly as large as the image, and the image is
+  # sized for the system and not for what runs on it: 1636 MB, of which /data
+  # keeps what two subvolumes leave over - too little for an application image
+  # of any size, and the pull fails with ENOSPC. 'disk_size' is what the guest
+  # is meant to have, so the disk is grown to it before the first boot;
+  # init.sh's growpart and 'btrfs filesystem resize max' then take the partition
+  # and the filesystem with it.
+  #
+  # Only upwards: a 'disk_size' below the image's own size is not a shrink qm
+  # would perform, it is an error that would stop the batch after the guest was
+  # created. The image is the floor, and it is measured here rather than asked
+  # of the host, which does not have it yet.
+  if (( DISK_SIZE * 1024 * 1024 * 1024 > $(artefact_bytes) )); then
+    queue qm disk resize "${VMID}" scsi0 "${DISK_SIZE}G"
+  fi
 
   queue rm -f "${staged}"
 }
