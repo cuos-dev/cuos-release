@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 services:
   cuos-dev-container:
-    image: "ghcr.io/cuos-dev/cuos-iac-dev-container:v0.3.4"
-    x-digest: "sha256:1ad25e15661b1363cc2f1e054f3f64d4fa3555485a0641a156db1da78c629705"
+    image: "ghcr.io/cuos-dev/cuos-iac-dev-container:v0.4.0"
+    x-digest: "sha256:70fa60e553aa8bf9e93d3d85ed746cf2f0499ce4a65c5699e4f3841830f0c9b7"
     network_mode: host
     pid: host
     privileged: true
