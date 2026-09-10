@@ -47,12 +47,16 @@ run_factory() {
   esac
   set +x
 
-  # 2>&1 into the pipe: the factories trace to stderr, and docker's own failures
-  # arrive there too - both belong in the log rather than on the terminal.
+  # Only stdout goes through the loop. All four factories mark their steps on
+  # stdout and trace to stderr, and bash writes a traced line in several pieces:
+  # sharing one pipe, a step line lands inside a trace and stops looking like
+  # one ("+ is_local_build==> Fetching ...", seen 2026-09-10). stderr needs no
+  # redirection to reach the log - log_init pointed this shell's own at it, and
+  # docker's failures follow it there.
   # 'pipefail' is set, so the status is the container's, not the loop's, and the
   # loop itself cannot fail the way 'grep' would on a factory that marks
   # nothing.
-  docker run "$@" 2>&1 | while IFS= read -r line; do
+  docker run "$@" | while IFS= read -r line; do
     if log_is_step_line "${line}"; then
       nested_step "${line}"
     else
