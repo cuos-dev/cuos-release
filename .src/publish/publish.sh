@@ -30,10 +30,20 @@ done
 
 export ORG=cuos-dev
 
-# Token: Release Digest Fetch (classic)
+raise() {
+  echo "Error: $*" >&2
+  exit 1
+}
+
+# Token: Release Digest Fetch (classic), scope read:packages
 #export GITHUB_TOKEN=...
+TOKEN_FILE="${MAIN_DIR}.publish_github_token"
+[[ -f "${TOKEN_FILE}" ]] || raise "No ${TOKEN_FILE}.
+       It holds one line: export GITHUB_TOKEN=... - a classic token with
+       read:packages on ${ORG}."
 # shellcheck source=/dev/null
-source "${MAIN_DIR}.publish_github_token"
+source "${TOKEN_FILE}"
+[[ -n "${GITHUB_TOKEN:-}" ]] || raise "${TOKEN_FILE} sets no GITHUB_TOKEN."
 
 if [[ "$(uname)" = "Darwin" ]]; then
   sed() {
@@ -41,9 +51,33 @@ if [[ "$(uname)" = "Darwin" ]]; then
   }
 fi
 
-VERSIONS="$("${SCRIPT_DIR}/github_fetch_digests.sh" | jq '.[] | {"package": .package, "version": .tags[0], "digest": .name}' | jq -s . | jq 'map({ (.package): del(.package) }) | add')"
+# Every package a pin below is written from. A release where one of them is
+# missing - a workflow still running, a board whose image was never built, a
+# token that cannot see the private packages - must not be published half:
+# release.json, .versions.env and the four compose files are rewritten in
+# place, so an unnoticed gap is written over the last good pin.
+REQUIRED_PACKAGES=(
+  cuos-system
+  cuos-system-rpi-arm64
+  cuos-system-rpi-arm32
+  cuos-system-orangepi-zero3
+  cuos-system-lxc
+  cuos-updater
+  cuos-iac
+  cuos-iac-webui
+  cuos-iac-dev-container
+  cuos-iac-fleet-agent
+  cuos-image-factory
+  cuos-installer-factory
+)
 
-echo "${VERSIONS}"
+PACKAGES_JSON="$("${SCRIPT_DIR}/github_fetch_digests.sh")" \
+  || raise "Could not read the container packages of ${ORG} from GitHub.
+       The error above is github_fetch_digests.sh's; the usual cause is a
+       token that has expired or lacks read:packages."
+
+VERSIONS="$(jq 'map({ (.package): { version: .tags[0], digest: .name } }) | add' <<<"${PACKAGES_JSON}")" \
+  || raise "GitHub's answer was not the list of packages this expects."
 
 version() {
   package="$1"
@@ -54,6 +88,18 @@ digest() {
   echo "${VERSIONS}" | jq -r --arg pkg "${package}" '.[$pkg].digest'
 }
 
+# jq's 'add' over an empty list is null, which is how a failed fetch used to
+# reach the end of this script and pin every image to the string "null".
+missing=()
+for package in "${REQUIRED_PACKAGES[@]}"; do
+  [[ "$(version "${package}")" == v* && "$(digest "${package}")" == sha256:* ]] \
+    || missing+=("${package}")
+done
+[[ "${#missing[@]}" -eq 0 ]] || raise "No tagged version with a digest for: ${missing[*]}
+       Nothing was written. Wait for the image workflows of the tag to finish,
+       then run this again."
+
+echo "${VERSIONS}"
 
 # The image pins, merged into whatever the given file holds. release.json keeps
 # its image names, registry and signing keys that way; an empty object yields
