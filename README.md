@@ -42,14 +42,28 @@ naming image versions yourself:
 ```json
 {
   "#include": "cuos-release/release.json",
-  "hostname": "my-system",
-  "initial_image": "ghcr.io/my-org/my-init-app",
-  "initial_image_version": "latest"
+  "hostname": "my-system"
 }
 ```
 
-`initial_image` is **your** container — the one CuOS starts on the finished
-system, and from which you start everything else. What it has to look like:
+That is a complete system. `release.json` pins
+[CuOS IaC](https://github.com/cuos-dev/cuos-iac) as `init_image`, so the
+finished system starts it and deploys your services from a git repository.
+
+`init_image` names the **Application Init Container** — the one container CuOS
+starts, and from which everything else is started. CuOS IaC is one of those;
+to run your own instead, name it in the same key:
+
+```json
+{
+  "#include": "cuos-release/release.json",
+  "hostname": "my-system",
+  "init_image": "ghcr.io/my-org/my-init-app",
+  "init_image_version": "latest"
+}
+```
+
+What such a container has to look like:
 [Your Application Init Container](https://github.com/cuos-dev/cuos/blob/development/docs/common/cuos-app-init.md).
 
 Build a disk image:

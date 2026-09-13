@@ -14,9 +14,7 @@ Give the configuration an LXC image and build with `--platform lxc`:
 ```json
 {
   "#include": ["cuos-release/release.json"],
-  "hostname": "my-container",
-  "initial_image": "ghcr.io/my-org/my-init-app",
-  "initial_image_version": "latest"
+  "hostname": "my-container"
 }
 ```
 
