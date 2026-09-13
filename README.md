@@ -88,7 +88,7 @@ qemu-system-x86_64 -m 2048 -drive format=raw,file="${IMAGE}" -nographic
 ```
 
 On first boot CuOS sets up its subvolumes, applies the configuration, and starts
-`initial_image` as the application container. Check it with `cuos state`,
+`init_image` as the application container. Check it with `cuos state`,
 `cuos version` and `cuos log` on the running system.
 
 ## What you can build
