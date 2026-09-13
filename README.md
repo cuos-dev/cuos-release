@@ -2,13 +2,13 @@
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE.txt)
 
-Build bootable [CuOS](https://github.com/cuos-dev/cuos) systems from a
-configuration file.
+🚀 **Bootable CuOS systems from one configuration file.** A disk image, an ISO
+installer or an LXC container — you describe the system you want in a
+`system.json` and this produces it.
 
 CuOS is a container-based operating system: the OS itself is a container image,
 installed onto A/B BTRFS subvolumes and updated by replacing one of them. This
-repository is where you *make* one — a disk image, an ISO installer, or an LXC
-container — from a `system.json` that describes the system you want.
+repository is where you *make* one.
 
 **Start here if you want a running system.** If you want to understand or extend
 the OS, start at [cuos](https://github.com/cuos-dev/cuos) instead.
