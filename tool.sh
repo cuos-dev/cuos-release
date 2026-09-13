@@ -774,13 +774,24 @@ EOF
 ##                 same rules as any other build (see './tool.sh name').
 ##
 ## shell     [--platform P] path/to/system.json[]
-##                                 - Open a shell inside the built image.
+## shell     output/NAME.img       - Open a shell inside the built image.
 ##                                   Boot and root partitions are detected
 ##                                   automatically. Build the image first.
+##                                   Given the image itself, the configuration
+##                                   is not merged again - the artefact is
+##                                   taken as it stands.
     "shell")
       if [[ -f "${1:-}" && "${1:-}" == *".img" ]]; then
-        image_name="${1/.img}"
-	image_name="${image_name/output\//}"
+        # The factory only ever sees ${OUTPUT_DIR} as /output, so an image
+        # somewhere else would be named but never found.
+        [[ "$(cd "$(dirname "$1")" && pwd)" == "${OUTPUT_DIR}" ]] || raise \
+          "'$1' is not in ${OUTPUT_DIR}. 'shell' opens an artefact this tooling
+       built; move it there, or pass the configuration instead."
+        image_name="$(basename "${1%.img}")"
+        [[ -f "${OUTPUT_DIR}/${image_name}.json" ]] || raise \
+          "'${image_name}.json' is missing beside the image. It is written by
+       the build and holds the registry credentials; pass the configuration
+       instead of the image."
       else
         parse_options "$@"
         reject_proxmox_options "shell"

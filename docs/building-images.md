@@ -45,7 +45,7 @@ run — the build prints only a line per step. See
 | `--platform` | Target | Disk layout |
 |---|---|---|
 | *(default)* | The build host's architecture | GPT, BIOS + UEFI |
-| `x86_64` | 64-bit PC |
+| `x86_64` | 64-bit PC | GPT, BIOS + UEFI |
 | `rpi-arm64` | 64-bit Raspberry Pi | MBR + FAT boot |
 | `rpi-arm32` | 32-bit Raspberry Pi | MBR + FAT boot |
 | `orangepi-zero3` | Orange Pi Zero 3 | MBR + FAT boot |
@@ -55,7 +55,6 @@ The platform also chooses the OS image: `<platform>_image` from your
 configuration if present, `os_image` otherwise. Including `release.json` gives
 you pinned images for `os`, `rpi-arm64`, `rpi-arm32`, `orangepi-zero3`
 and `lxc`.
-
 
 Any other platform name is accepted, but then its disk layout has to be stated
 with `--layout mbr` or `--layout gpt`. There is no default for an unknown board

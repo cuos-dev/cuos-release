@@ -15,7 +15,7 @@ Give the configuration an LXC image and build with `--platform lxc`:
 {
   "#include": ["cuos-release/release.json"],
   "hostname": "my-container",
-  "initial_image": "my-image",
+  "initial_image": "docker.io/library/nginx",
   "initial_image_version": "latest"
 }
 ```
@@ -38,7 +38,7 @@ The result is a gzipped tarball in `./output/`:
 ## Proxmox VE
 
 `tool.sh` can upload and start the LXC container in one command —
-`./tool.sh proxmox-create my-container.json`, see
+`./cuos-release/tool.sh proxmox-create my-container.json`, see
 [Deploying to Proxmox VE](testing-on-proxmox.md). The manual steps below are
 what it does, and what to reach for when the container is not being built by
 this tooling.
@@ -71,6 +71,21 @@ pct create 100 /var/lib/vz/template/cache/cuos-my-container.tar.gz \
 
 The password Proxmox asks for is replaced at the first system update.
 
+### Supply a different configuration
+
+The build bakes the configuration you passed in into the image, so a
+purpose-built container needs nothing further. A generic image is configured per
+container instead:
+
+```sh
+pct push 100 my-container.json /system_init.json
+```
+
+Do it before the container has configured itself — once `/system.json` exists it
+is not read again. Why the order is safe, and what the container does while the
+file is missing:
+[CuOS in an LXC container](https://github.com/cuos-dev/cuos/blob/development/docs/common/lxc-deployment.md).
+
 ### Network
 
 **Proxmox configures the container's network, always.** CuOS does not: inside a
@@ -78,7 +93,7 @@ container `configure_network()` returns without touching anything, because the
 interface belongs to the host. A `network` section in `system.json` is therefore
 not applied by the container — it is ignored.
 
-That does not make it pointless to write one. `./tool.sh proxmox-create` reads it
+That does not make it pointless to write one. `./cuos-release/tool.sh proxmox-create` reads it
 and hands the address to Proxmox, so the network is stated once, in the same
 file as the rest of the system:
 

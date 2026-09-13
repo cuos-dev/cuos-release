@@ -20,15 +20,20 @@ the OS, start at [cuos](https://github.com/cuos-dev/cuos) instead.
 - For `image` and `installer`: **loop devices, device-mapper, and the right to
   mount filesystems.** These belong to the host kernel, so building a disk image
   works on a host or in a VM but **not inside an LXC container**.
-  `image --platform lxc` needs none of it — it works as well inside LXC.
+  `image --platform lxc` needs none of it — it exports a container instead of
+  partitioning a disk, so it builds anywhere Docker runs.
 - For `config-sign`: **ssh-keygen**
 - For `proxmox-*`: **ssh** and **scp**
+- Around 6 GB of free disk space.
 
 ## Quickstart
 
 ```sh
 git clone https://github.com/cuos-dev/cuos-release.git
 ```
+
+Everything below is run from the directory the clone landed in — beside
+`cuos-release/`, not inside it. That is also where `output/` appears.
 
 Write a minimal `system.json`. The versions of the CuOS images themselves are
 already pinned in [`release.json`](release.json), so include it rather than
@@ -73,14 +78,14 @@ On first boot CuOS sets up its subvolumes, applies the configuration, and starts
 | Command | Result | Guide |
 |---|---|---|
 | `tool.sh image CONFIG` | A raw disk image (`.img`) to write to a disk | [Building disk images](docs/building-images.md) |
-| `tool.sh installer CONFIG` | An ISO installer that installs onto the target's disk | [Building an installer](docs/build-installers.md) |
+| `tool.sh installer CONFIG` | An ISO installer that installs onto the target's disk | [Building an installer](docs/building-installers.md) |
 | `tool.sh image --platform lxc CONFIG` | A `tar.gz` to import as an LXC container | [LXC and Proxmox](docs/lxc-proxmox.md) |
 
 To try one of them out, `tool.sh` can also put the result on a
 [Proxmox VE](https://www.proxmox.com/) host and start it:
 
 ```sh
-cuos-release/tool.sh proxmox-create my-system.json
+./cuos-release/tool.sh proxmox-create my-system.json
 ```
 
 A VM or a container, depending on the platform, with everything it needs read
@@ -89,7 +94,7 @@ from `system.json` — see [Deploying to Proxmox VE](docs/testing-on-proxmox.md)
 Use `--platform` for a target other than the machine you are building on:
 
 ```sh
-cuos-release/tool.sh image --platform rpi-arm64 my-system.json
+./cuos-release/tool.sh image --platform rpi-arm64 my-system.json
 ```
 
 | `--platform` | Target |
@@ -136,7 +141,7 @@ overridden per system. Several files given on the command line merge the same
 way, left to right. To see what a build will actually use:
 
 ```sh
-cuos-release/tool.sh config my-system.json
+./cuos-release/tool.sh config my-system.json
 ```
 
 ### Naming
@@ -147,14 +152,14 @@ Artefacts are named `<product_name>-<system_name>`, both optional:
 - `system_name` defaults to `hostname`, then to the configuration file's name —
   or its directory name if the file is called `system.json`
 
-`cuos-release/tool.sh name CONFIG` prints the result.
+`./cuos-release/tool.sh name CONFIG` prints the result.
 
 ### Passwords, signing and encryption
 
 ```sh
-cuos-release/tool.sh root-password -r -w my-system.json   # hash a root password into the file
-cuos-release/tool.sh config-sign my-system.json           # merged config, SSH-signed
-cuos-release/tool.sh config-encrypt secrets.json          # encrypt a file at rest
+./cuos-release/tool.sh root-password -r -w my-system.json   # hash a root password into the file
+./cuos-release/tool.sh config-sign my-system.json           # merged config, SSH-signed
+./cuos-release/tool.sh config-encrypt secrets.json          # encrypt a file at rest
 ```
 
 `root-password` also writes `console_password` (`-c`) and
