@@ -626,7 +626,7 @@ update_iac_local() {
   export SYSTEM_CONFIG_PATH="${CONFIG_DIR}/.config-${IAC_COMPOSE_PROJECT_NAME}.json"
   echo "${merged_config}" >"${SYSTEM_CONFIG_PATH}"
 
-  docker exec "${COMPOSE_PROJECT_NAME}-cuos-iac-1" "/api/pre_update"
+  docker exec "${COMPOSE_PROJECT_NAME}-cuos-iac-1" "/api/cuos-trigger-update"
   exit "$?"
 }
 
