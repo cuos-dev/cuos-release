@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 services:
   cuos-iac-webui:
-    image: "ghcr.io/cuos-dev/cuos-iac-webui:v0.4.0"
-    x-digest: "sha256:db75b36efecd1f0a90303d52ed9979f25be06a19d7259430b3fb16eec5754fe0"
+    image: "ghcr.io/cuos-dev/cuos-iac-webui:v0.4.1"
+    x-digest: "sha256:e1c7d000a1b4a298a08bbd51b753ce94c23115a16f13ad80a21e1879b4765489"
     volumes:
       - type: bind
         source: "${SYSTEM_CONFIG_PATH:-/system.json}"
