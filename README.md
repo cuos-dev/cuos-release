@@ -50,7 +50,7 @@ That is a complete system. `release.json` pins
 [CuOS IaC](https://github.com/cuos-dev/cuos-iac) as `init_image`, so the
 finished system starts it and deploys your services from a git repository.
 
-`init_image` names the **Application Init Container** — the one container CuOS
+`init_image` names the **CuOS Init App** — the one container CuOS
 starts, and from which everything else is started. CuOS IaC is one of those;
 to run your own instead, name it in the same key:
 
@@ -64,7 +64,7 @@ to run your own instead, name it in the same key:
 ```
 
 What such a container has to look like:
-[Your Application Init Container](https://github.com/cuos-dev/cuos/blob/development/docs/common/cuos-app-init.md).
+[Your CuOS Init App](https://github.com/cuos-dev/cuos/blob/development/docs/common/cuos-init-app.md).
 
 Build a disk image:
 
