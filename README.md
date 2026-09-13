@@ -41,7 +41,7 @@ naming image versions yourself:
 
 ```json
 {
-  "#include": "cuos-release/release.json",
+  "#include": ["cuos-release/release.json"],
   "hostname": "my-system"
 }
 ```
@@ -56,7 +56,7 @@ to run your own instead, name it in the same key:
 
 ```json
 {
-  "#include": "cuos-release/release.json",
+  "#include": ["cuos-release/release.json"],
   "hostname": "my-system",
   "init_image": "ghcr.io/my-org/my-init-app",
   "init_image_version": "latest"
@@ -142,7 +142,7 @@ boot path.
 [system.json reference](https://github.com/cuos-dev/cuos/blob/development/docs/common/system-json-reference.md).
 
 **Compose, do not copy.** A configuration can pull in others with `#include`,
-which takes one path or a list, relative to the including file:
+a list of paths relative to the including file:
 
 ```json
 {
