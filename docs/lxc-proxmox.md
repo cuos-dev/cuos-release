@@ -15,7 +15,7 @@ Give the configuration an LXC image and build with `--platform lxc`:
 {
   "#include": ["cuos-release/release.json"],
   "hostname": "my-container",
-  "initial_image": "docker.io/library/nginx",
+  "initial_image": "ghcr.io/my-org/my-init-app",
   "initial_image_version": "latest"
 }
 ```
@@ -70,21 +70,6 @@ pct create 100 /var/lib/vz/template/cache/cuos-my-container.tar.gz \
 ```
 
 The password Proxmox asks for is replaced at the first system update.
-
-### Supply a different configuration
-
-The build bakes the configuration you passed in into the image, so a
-purpose-built container needs nothing further. A generic image is configured per
-container instead:
-
-```sh
-pct push 100 my-container.json /system_init.json
-```
-
-Do it before the container has configured itself — once `/system.json` exists it
-is not read again. Why the order is safe, and what the container does while the
-file is missing:
-[CuOS in an LXC container](https://github.com/cuos-dev/cuos/blob/development/docs/common/lxc-deployment.md).
 
 ### Network
 
@@ -155,7 +140,7 @@ Logs: `lxc exec my-cuos -- journalctl -f`
 
 | Symptom | Check |
 |---|---|
-| The container starts but nothing happens | Is `/system_init.json` present? It waits for it — `pct push` it. |
+| The container starts but nothing happens | Is `/system_init.json` present? The build writes it; a tarball built without a configuration waits forever. |
 | Docker does not start inside the container | Nesting enabled? Kernel modules available? Try privileged mode. |
 | No network | Configured on the Proxmox side? A `network` section in `system.json` is not applied inside a container — see [Network](#network) |
 | Application container not pulled | Registry credentials in the configuration, and DNS inside the container |

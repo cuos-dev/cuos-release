@@ -43,10 +43,14 @@ naming image versions yourself:
 {
   "#include": "cuos-release/release.json",
   "hostname": "my-system",
-  "initial_image": "docker.io/library/nginx",
+  "initial_image": "ghcr.io/my-org/my-init-app",
   "initial_image_version": "latest"
 }
 ```
+
+`initial_image` is **your** container — the one CuOS starts on the finished
+system, and from which you start everything else. What it has to look like:
+[Your Application Init Container](https://github.com/cuos-dev/cuos/blob/development/docs/common/cuos-app-init.md).
 
 Build a disk image:
 
