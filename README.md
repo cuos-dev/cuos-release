@@ -1,5 +1,7 @@
 # CuOS Release Tooling
 
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE.txt)
+
 Build bootable [CuOS](https://github.com/cuos-dev/cuos) systems from a
 configuration file.
 
@@ -281,6 +283,7 @@ Certificate of Origin sign-off (`git commit -s`, see [DCO.txt](DCO.txt)).
 
 ## License
 
-Apache-2.0 — see [LICENSE.txt](LICENSE.txt) and [NOTICE](NOTICE).
+Apache-2.0 — see [LICENSE.txt](LICENSE.txt) and [NOTICE](NOTICE). Each source
+file carries an `SPDX-License-Identifier` line.
 No warranty; see [DISCLAIMER.md](DISCLAIMER.md).
 
