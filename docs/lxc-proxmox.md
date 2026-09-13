@@ -138,7 +138,6 @@ Logs: `lxc exec my-cuos -- journalctl -f`
 
 | Symptom | Check |
 |---|---|
-| The container starts but nothing happens | Is `/system_init.json` present? The build writes it; a tarball built without a configuration waits forever. |
 | Docker does not start inside the container | Nesting enabled? Kernel modules available? Try privileged mode. |
 | No network | Configured on the Proxmox side? A `network` section in `system.json` is not applied inside a container — see [Network](#network) |
 | Application container not pulled | Registry credentials in the configuration, and DNS inside the container |
