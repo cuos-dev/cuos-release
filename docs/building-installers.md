@@ -12,16 +12,16 @@ path. For a Raspberry Pi or an Orange Pi, write a disk image instead.
 
 - Docker, running and usable by your user
 - `jq`
-- An x86-64 build host
+- An x86-64 build host (or emulation)
 
 ## Build
 
 ```sh
-./tool.sh installer path/to/system.json
+./cuos-release/tool.sh installer path/to/system.json
 ```
 
 The ISO is written to `./output/`, named after your configuration
-(`./tool.sh name path/to/system.json` prints the name).
+(`./cuos-release/tool.sh name path/to/system.json` prints the name).
 
 This builds a system image first and then wraps it into the ISO, so it takes
 about as long as a disk image build plus the ISO step.
@@ -32,7 +32,7 @@ If you already have an installer ISO and only want a different configuration on
 it, build from that one instead of from scratch:
 
 ```sh
-./tool.sh installer --base existing-installer.iso path/to/system.json
+./cuos-release/tool.sh installer --base existing-installer.iso path/to/system.json
 ```
 
 This is much faster: nothing is rebuilt, only the configuration inside the ISO
@@ -51,7 +51,7 @@ ISO.
 Write it to a USB device:
 
 ```sh
-ISO="output/$(./tool.sh name path/to/system.json).iso"
+ISO="output/$(./cuos-release/tool.sh name path/to/system.json).iso"
 
 sudo dd if="${ISO}" of=/dev/sdX bs=4M status=progress conv=fsync
 ```

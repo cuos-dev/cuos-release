@@ -13,15 +13,15 @@ Give the configuration an LXC image and build with `--platform lxc`:
 
 ```json
 {
-  "#include": "release.json",
+  "#include": ["cuos-release/release.json"],
   "hostname": "my-container",
-  "initial_image": "docker.io/library/nginx",
+  "initial_image": "my-image",
   "initial_image_version": "latest"
 }
 ```
 
 ```sh
-./tool.sh image --platform lxc my-container.json
+./cuos-release/tool.sh image --platform lxc my-container.json
 ```
 
 Unlike a disk image, this one **runs** a script inside the container while
@@ -32,32 +32,12 @@ extra.
 The result is a gzipped tarball in `./output/`:
 
 ```sh
-./tool.sh name my-container.json      # -> CuOS-my-container, so CuOS-my-container.tar.gz
+./cuos-release/tool.sh name my-container.json      # -> CuOS-my-container, so CuOS-my-container.tar.gz
 ```
-
-## How the container gets its configuration
-
-This is the part worth understanding before deploying, because it decides
-whether one image serves one container or many.
-
-At startup CuOS looks for **`/system_init.json`** inside the container and copies
-it to `/system.json`. If the file is not there yet, **it waits** — the container
-starts and blocks until the configuration appears.
-
-The build copies the configuration you passed in to `/system_init.json`, so a
-freshly built tarball already carries its own configuration and needs nothing
-further.
-
-That gives you two ways to work:
-
-- **One image per system.** Build with the configuration you want; deploy; done.
-- **One image for many systems.** Build a generic image, then place a
-  per-container `/system_init.json` after creating the container. The container
-  waits for it, so the order is safe.
 
 ## Proxmox VE
 
-`tool.sh` can do all of the following in one command —
+`tool.sh` can upload and start the LXC container in one command —
 `./tool.sh proxmox-create my-container.json`, see
 [Deploying to Proxmox VE](testing-on-proxmox.md). The manual steps below are
 what it does, and what to reach for when the container is not being built by
@@ -90,19 +70,6 @@ pct create 100 /var/lib/vz/template/cache/cuos-my-container.tar.gz \
 ```
 
 The password Proxmox asks for is replaced at the first system update.
-
-### Supply the configuration
-
-If the image was built generically, or you want to deploy it with a different
-configuration than it was built with, copy one into the container:
-
-```sh
-pct push 100 my-container.json /system_init.json
-```
-
-The container picks it up from its wait loop and continues starting. Do this
-before the container has configured itself — once `/system.json` exists, it is
-not read again.
 
 ### Network
 

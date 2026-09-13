@@ -13,34 +13,21 @@ the OS, start at [cuos](https://github.com/cuos-dev/cuos) instead.
 
 ## Requirements
 
+- Linux or macOS. The host does not have to match the target's architecture. Windows is untested.
 - **Docker**, running, and usable by your user. The factories run as containers.
 - **jq**
 - **git**
-- **ssh-keygen**, only for `config-sign`
-- **ssh** and **scp**, only for the `proxmox-*` commands — which in turn need no
-  Docker
-- Linux or macOS. The host does not have to match the target's architecture:
-  the OS image is unpacked into the artefact, not executed.
 - For `image` and `installer`: **loop devices, device-mapper, and the right to
   mount filesystems.** These belong to the host kernel, so building a disk image
-  works on a host or in a VM but **not inside an LXC container** without
-  privileged access and a good deal of configuration. `image --platform lxc`
-  needs none of it — it exports a container instead of partitioning a disk.
-
-  The factory is given the host's `/dev`, so devices the kernel creates during
-  the build are visible to it. What it cannot do is load kernel modules — if
-  neither is loaded on the host, load them once:
-
-  ```sh
-  sudo modprobe loop dm_mod
-  ```
-- Around 6 GB of free disk space.
+  works on a host or in a VM but **not inside an LXC container**.
+  `image --platform lxc` needs none of it — it works as well inside LXC.
+- For `config-sign`: **ssh-keygen**
+- For `proxmox-*`: **ssh** and **scp**
 
 ## Quickstart
 
 ```sh
 git clone https://github.com/cuos-dev/cuos-release.git
-cd cuos-release
 ```
 
 Write a minimal `system.json`. The versions of the CuOS images themselves are
@@ -49,7 +36,7 @@ naming image versions yourself:
 
 ```json
 {
-  "#include": "release.json",
+  "#include": "cuos-release/release.json",
   "hostname": "my-system",
   "initial_image": "docker.io/library/nginx",
   "initial_image_version": "latest"
@@ -59,20 +46,20 @@ naming image versions yourself:
 Build a disk image:
 
 ```sh
-./tool.sh image my-system.json
+./cuos-release/tool.sh image my-system.json
 ```
 
 The result lands in `./output/`. The file name comes from your configuration,
 not from a fixed name — ask for it:
 
 ```sh
-./tool.sh name my-system.json      # -> CuOS-my-system
+./cuos-release/tool.sh name my-system.json      # -> CuOS-my-system
 ```
 
 Write it to a disk or boot it in a VM:
 
 ```sh
-IMAGE="output/$(./tool.sh name my-system.json).img"
+IMAGE="output/$(./cuos-release/tool.sh name my-system.json).img"
 
 qemu-system-x86_64 -m 2048 -drive format=raw,file="${IMAGE}" -nographic
 ```
@@ -85,15 +72,15 @@ On first boot CuOS sets up its subvolumes, applies the configuration, and starts
 
 | Command | Result | Guide |
 |---|---|---|
-| `./tool.sh image CONFIG` | A raw disk image (`.img`) to write to a disk | [Building disk images](docs/building-images.md) |
-| `./tool.sh installer CONFIG` | An ISO installer that installs onto the target's disk | [Building an installer](docs/installation.md) |
-| `./tool.sh image --platform lxc CONFIG` | A `tar.gz` to import as an LXC container | [LXC and Proxmox](docs/lxc-proxmox.md) |
+| `tool.sh image CONFIG` | A raw disk image (`.img`) to write to a disk | [Building disk images](docs/building-images.md) |
+| `tool.sh installer CONFIG` | An ISO installer that installs onto the target's disk | [Building an installer](docs/build-installers.md) |
+| `tool.sh image --platform lxc CONFIG` | A `tar.gz` to import as an LXC container | [LXC and Proxmox](docs/lxc-proxmox.md) |
 
 To try one of them out, `tool.sh` can also put the result on a
 [Proxmox VE](https://www.proxmox.com/) host and start it:
 
 ```sh
-./tool.sh proxmox-create my-system.json
+cuos-release/tool.sh proxmox-create my-system.json
 ```
 
 A VM or a container, depending on the platform, with everything it needs read
@@ -102,12 +89,13 @@ from `system.json` — see [Deploying to Proxmox VE](docs/testing-on-proxmox.md)
 Use `--platform` for a target other than the machine you are building on:
 
 ```sh
-./tool.sh image --platform rpi-arm64 my-system.json
+cuos-release/tool.sh image --platform rpi-arm64 my-system.json
 ```
 
 | `--platform` | Target |
 |---|---|
 | *(default)* | The build host's architecture |
+| `x86_64` | 64-bit PC |
 | `rpi-arm64` | 64-bit Raspberry Pi |
 | `rpi-arm32` | 32-bit Raspberry Pi (legacy — see the platform support docs) |
 | `orangepi-zero3` | Orange Pi Zero 3 |
@@ -116,8 +104,7 @@ Use `--platform` for a target other than the machine you are building on:
 The platform also selects the OS image: `<platform>_image` if your configuration
 has that key, `os_image` otherwise. One configuration can therefore describe
 several targets. `release.json` carries pinned images for `os`, `rpi-arm64`,
-`rpi-arm32` and `lxc`; the Orange Pi Zero 3 has no prebuilt image, so building
-for it means supplying `orangepi-zero3_image` yourself.
+`rpi-arm32`, `orangepi-zero3` and `lxc`.
 
 Any other platform name works as well, but then its disk layout has to be stated
 with `--layout mbr` or `--layout gpt`, because a wrong layout produces an image
@@ -136,7 +123,10 @@ which takes one path or a list, relative to the including file:
 
 ```json
 {
-  "#include": ["release.json", "../common/network.json"],
+  "#include": [
+    "cuos-release/release.json",
+    "common/network.json"
+  ],
   "hostname": "gateway-01"
 }
 ```
@@ -146,7 +136,7 @@ overridden per system. Several files given on the command line merge the same
 way, left to right. To see what a build will actually use:
 
 ```sh
-./tool.sh config my-system.json
+cuos-release/tool.sh config my-system.json
 ```
 
 ### Naming
@@ -157,18 +147,18 @@ Artefacts are named `<product_name>-<system_name>`, both optional:
 - `system_name` defaults to `hostname`, then to the configuration file's name —
   or its directory name if the file is called `system.json`
 
-`./tool.sh name CONFIG` prints the result.
+`cuos-release/tool.sh name CONFIG` prints the result.
 
 ### Passwords, signing and encryption
 
 ```sh
-./tool.sh root-password -r -w my-system.json   # hash a root password into the file
-./tool.sh config-sign my-system.json           # merged config, SSH-signed
-./tool.sh config-encrypt secrets.json          # encrypt a file at rest
+cuos-release/tool.sh root-password -r -w my-system.json   # hash a root password into the file
+cuos-release/tool.sh config-sign my-system.json           # merged config, SSH-signed
+cuos-release/tool.sh config-encrypt secrets.json          # encrypt a file at rest
 ```
 
 `root-password` also writes `console_password` (`-c`) and
-`console_expert_password` (`-e`). Run `./tool.sh help` for the full list of
+`console_expert_password` (`-e`). Run `./cuos-release/tool.sh help` for the full list of
 commands.
 
 ## Using it in your own repository
@@ -182,9 +172,8 @@ git submodule add https://github.com/cuos-dev/cuos-release.git
 ./cuos-release/tool.sh update
 ```
 
-`tool.sh update` updates the submodules of the surrounding repository and
-**verifies their commit signatures** against
-[`.allowed-signers`](.allowed-signers), refusing to move to an unsigned commit.
+`./cuos-release/tool.sh update` updates the CuOS submodules of the surrounding repository and
+**verifies their commit signatures**, refusing to move to an unsigned commit.
 
 ## Running the IaC manager without CuOS
 
@@ -192,8 +181,8 @@ The IaC manager can run on any Docker host, which is useful for existing
 infrastructure and for development:
 
 ```sh
-./tool.sh start-iac-local my-system.json
-./tool.sh stop-iac-local my-system.json
+./cuos-release/tool.sh start-iac-local my-system.json
+./cuos-release/tool.sh stop-iac-local my-system.json
 ```
 
 See [`cuos-iac-local/README.md`](cuos-iac-local/README.md).
@@ -213,15 +202,13 @@ involved — in a log file beside the artefact:
 ==> output/CuOS-my-system.img written in 4m12s
 ```
 
-The indented lines come from the factory container, and appear once the pinned
-factory image is one that marks its steps. The log is `output/NAME.build.log`,
-written on every run and not only on a failure, and a build that fails prints
-the end of it together with its path. `NAME` is what
-`./tool.sh name my-system.json` reports.
+The log is `output/NAME.build.log`, written on every run.
+`NAME` is what `./cuos-release/tool.sh name my-system.json` reports.
 
 ```sh
-./tool.sh shell my-system.json      # shell inside the built image
-DEBUG=1 ./tool.sh image my-system.json
+./cuos-release/tool.sh shell my-system.json      # shell inside the built image
+./cuos-release/tool.sh shell output/my-system.img
+DEBUG=1 ./cuos-release/tool.sh image my-system.json
 ```
 
 `shell` mounts the image's boot and root filesystems and drops you into a shell.
@@ -245,7 +232,6 @@ the cases that are not normal — working on CuOS itself, or on this tooling.
 | `BUILD=1` | Build the **image** factory from source instead of pulling it, and pull nothing at all. Needs a `cuos` checkout beside, one level above, or two levels above this repository — it runs `cuos/image-factory/build.sh`. The *installer* factory is neither built nor pulled, so `installer` only works if that image is already on your machine. |
 | `IAC_SIGNKEY_PATH` | The SSH key `config-sign` signs with. Default `~/.ssh/id_ed25519`. |
 | `PASSWORD_LENGTH` | Length of the password `root-password -g` generates. Default `20`. |
-| `OS_ARCH` | Accepted as an older spelling of `--platform`; the option wins. Prefer the option. |
 | `PROXMOX_HOST`, `PROXMOX_VMID`, `PROXMOX_ARTEFACT` | Defaults for `--host`, `--id` and `--artefact` of the `proxmox-*` commands, for driving them from a script. The options win. See [Deploying to Proxmox VE](docs/testing-on-proxmox.md). |
 
 **`DEVELOPMENT` and `BUILD` both disable the digest check**, which is the

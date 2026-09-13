@@ -778,13 +778,18 @@ EOF
 ##                                   Boot and root partitions are detected
 ##                                   automatically. Build the image first.
     "shell")
-      parse_options "$@"
-      reject_proxmox_options "shell"
-      [[ "${DEBUG:-}" == "1" ]] && set -x
-      merged_config="$("${SRC_DIR}/merge-configs.sh" "${ARGS[@]}")" || exit 1
-      resolve_platform "${merged_config}"
-      image_name="$(echo "${merged_config}" | image_name)"
-      echo "${merged_config}" | save_config "${image_name}"
+      if [[ -f "${1:-}" && "${1:-}" == *".img" ]]; then
+        image_name="${1/.img}"
+	image_name="${image_name/output\//}"
+      else
+        parse_options "$@"
+        reject_proxmox_options "shell"
+        [[ "${DEBUG:-}" == "1" ]] && set -x
+        merged_config="$("${SRC_DIR}/merge-configs.sh" "${ARGS[@]}")" || exit 1
+        resolve_platform "${merged_config}"
+        image_name="$(echo "${merged_config}" | image_name)"
+        echo "${merged_config}" | save_config "${image_name}"
+      fi
       create_image "${image_name}" \
         -it \
         -e "OS_ARCH=${PLATFORM_OS_ARCH}" \

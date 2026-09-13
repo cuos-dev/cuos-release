@@ -2,14 +2,13 @@
 
 `tool.sh` can put an artefact it has built onto a [Proxmox VE](https://www.proxmox.com/)
 host and start it — a VM from an installer ISO or a disk image, a container from
-an LXC export. It is meant for testing a build: one command per build/boot cycle
-instead of a scp, a `qm create` and a browser tab.
+an LXC export.
 
 ```sh
-./tool.sh installer my-system.json          # build it
-./tool.sh proxmox-create my-system.json     # put it on the host and start it
-./tool.sh proxmox-status  my-system.json
-./tool.sh proxmox-destroy my-system.json    # and away again
+./cuos-release/tool.sh installer my-system.json          # build it
+./cuos-release/tool.sh proxmox-create my-system.json     # put it on the host and start it
+./cuos-release/tool.sh proxmox-status  my-system.json
+./cuos-release/tool.sh proxmox-destroy my-system.json    # and away again
 ```
 
 This is an add-on, not part of building or releasing: it needs `ssh` and no
@@ -21,8 +20,7 @@ Docker, and nothing else in `tool.sh` depends on it.
   `pvesh` — in practice `root`. Key-based, since nothing here can answer a
   password prompt. The Proxmox API is only used through `pvesh` on the host.
 - **The artefact already built**, in `./output/`.
-- Proxmox VE 7 or newer. Deploying a **RAW disk image** additionally needs
-  **PVE 8**, for `qm create --scsi0 …,import-from=…`.
+- Proxmox VE 8 or newer.
 
 ## The commands
 
@@ -77,7 +75,7 @@ object:
 
 ```json
 {
-  "#include": "release.json",
+  "#include": ["cuos-release/release.json"],
   "hostname": "test-box",
   "platform": "lxc",
   "network": [
@@ -124,7 +122,7 @@ default**.
 
 ### These keys are not device configuration
 
-They describe where a *test* guest goes, not how the system behaves, so the OS
+They describe where a guest goes, not how the system behaves, so the OS
 never reads them and they are deliberately **not** in
 [`system-schema.json`](https://github.com/cuos-dev/cuos/blob/development/system/cuos/system-schema.json).
 The schema does not forbid extra keys, so a configuration carrying a `proxmox`
@@ -223,7 +221,7 @@ writes no log; `--dry-run` writes none either.
 `--dry-run` prints the `scp` and the script instead of running them:
 
 ```sh
-./tool.sh proxmox-create --dry-run my-system.json
+./cuos-release/tool.sh proxmox-create --dry-run my-system.json
 ```
 
 ```
@@ -249,15 +247,15 @@ the first and changes `system_name`:
 
 ```json
 {
-  "#include": "my-system.json",
+  "#include": ["my-system.json"],
   "system_name": "latest-stable",
   "os_image_version": "latest"
 }
 ```
 
 ```sh
-./tool.sh installer      my-system-latest-stable.json
-./tool.sh proxmox-create my-system-latest-stable.json
+./cuos-release/tool.sh installer      my-system-latest-stable.json
+./cuos-release/tool.sh proxmox-create my-system-latest-stable.json
 ```
 
 Both guests exist side by side, each found by its own name.
@@ -267,7 +265,7 @@ Both guests exist side by side, each found by its own name.
 | Symptom | Check |
 |---|---|
 | `No Proxmox host given` | `proxmox.host` or `--host`. There is deliberately no default. |
-| `Artefact not found` | Build it first; the message names the command. `./tool.sh name CONFIG` prints the expected name. |
+| `Artefact not found` | Build it first; the message names the command. `./cuos-release/tool.sh name CONFIG` prints the expected name. |
 | `… is already named 'x'` | `--replace`, or give the configuration another `hostname`. |
 | `131 is in use by qemu other-vm` | The id you asked for belongs to something else. Drop `--id` and let it pick. |
 | `Could not read the state of …` | Step 1 failed: ssh reachable, may that user run `pvesh`, and does `template_storage` exist? |
@@ -279,5 +277,5 @@ Both guests exist side by side, each found by its own name.
 ## See also
 
 - [LXC and Proxmox](lxc-proxmox.md) — the container variant, and the same steps by hand
-- [Building an installer](installation.md)
+- [Building an installer](building-installers.md)
 - [Building disk images](building-images.md)

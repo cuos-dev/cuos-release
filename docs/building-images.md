@@ -2,7 +2,7 @@
 
 A disk image is written directly onto the target's storage — an SD card, a USB
 device, a VM disk. To install onto a machine's own disk from removable media
-instead, see [Building an installer](installation.md); for a container, see
+instead, see [Building an installer](building-installers.md); for a container, see
 [LXC and Proxmox](lxc-proxmox.md).
 
 ## Prerequisites
@@ -22,14 +22,14 @@ see [LXC and Proxmox](lxc-proxmox.md).)
 ## Build
 
 ```sh
-./tool.sh image path/to/system.json
+./cuos-release/tool.sh image path/to/system.json
 ```
 
 The image is written to `./output/`. Its name comes from the configuration, so
 ask rather than assume:
 
 ```sh
-./tool.sh name path/to/system.json      # -> CuOS-my-system
+./cuos-release/tool.sh name path/to/system.json      # -> CuOS-my-system
 ```
 
 Beside it, `./output/NAME.build.log` holds the full technical output of the
@@ -39,12 +39,13 @@ run — the build prints only a line per step. See
 ### For another platform
 
 ```sh
-./tool.sh image --platform rpi-arm64 path/to/system.json
+./cuos-release/tool.sh image --platform rpi-arm64 path/to/system.json
 ```
 
 | `--platform` | Target | Disk layout |
 |---|---|---|
 | *(default)* | The build host's architecture | GPT, BIOS + UEFI |
+| `x86_64` | 64-bit PC |
 | `rpi-arm64` | 64-bit Raspberry Pi | MBR + FAT boot |
 | `rpi-arm32` | 32-bit Raspberry Pi | MBR + FAT boot |
 | `orangepi-zero3` | Orange Pi Zero 3 | MBR + FAT boot |
@@ -52,7 +53,9 @@ run — the build prints only a line per step. See
 
 The platform also chooses the OS image: `<platform>_image` from your
 configuration if present, `os_image` otherwise. Including `release.json` gives
-you pinned images for `os`, `rpi-arm64`, `rpi-arm32` and `lxc`.
+you pinned images for `os`, `rpi-arm64`, `rpi-arm32`, `orangepi-zero3`
+and `lxc`.
+
 
 Any other platform name is accepted, but then its disk layout has to be stated
 with `--layout mbr` or `--layout gpt`. There is no default for an unknown board
@@ -62,7 +65,7 @@ never boots.
 ## Write it to a device
 
 ```sh
-IMAGE="output/$(./tool.sh name path/to/system.json).img"
+IMAGE="output/$(./cuos-release/tool.sh name path/to/system.json).img"
 
 sudo dd if="${IMAGE}" of=/dev/sdX bs=4M status=progress conv=fsync
 ```
@@ -108,7 +111,7 @@ For a Proxmox *container* rather than a VM, see
 ## Looking inside a built image
 
 ```sh
-./tool.sh shell path/to/system.json
+./cuos-release/tool.sh shell path/to/system.json
 ```
 
 This mounts the image's boot and root filesystems and gives you a shell. The
