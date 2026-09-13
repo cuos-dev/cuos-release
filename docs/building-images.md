@@ -118,6 +118,6 @@ image has to have been built already.
 
 ## Further reading
 
-- [What the image contains](https://github.com/cuos-dev/cuos/blob/development/docs/common/building-images.md)
+- [What the image contains](https://github.com/cuos-dev/cuos/blob/HEAD/docs/common/building-images.md)
   — partition layout, the A/B subvolumes, platform notes
-- [system.json reference](https://github.com/cuos-dev/cuos/blob/development/docs/common/system-json-reference.md)
+- [system.json reference](https://github.com/cuos-dev/cuos/blob/HEAD/docs/common/system-json-reference.md)

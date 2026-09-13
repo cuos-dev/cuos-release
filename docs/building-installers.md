@@ -66,5 +66,5 @@ follow the prompts. The machine boots CuOS from its own disk afterwards.
 
 ## Further reading
 
-- [How the installer works and what a machine needs to boot it](https://github.com/cuos-dev/cuos/blob/development/docs/common/installation.md)
-- [system.json reference](https://github.com/cuos-dev/cuos/blob/development/docs/common/system-json-reference.md)
+- [How the installer works and what a machine needs to boot it](https://github.com/cuos-dev/cuos/blob/HEAD/docs/common/installation.md)
+- [system.json reference](https://github.com/cuos-dev/cuos/blob/HEAD/docs/common/system-json-reference.md)

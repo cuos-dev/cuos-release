@@ -5,7 +5,7 @@ a container root filesystem rather than a partitioned image, so there is no
 kernel, no bootloader and no partition table involved.
 
 How the container variant differs from a normal CuOS system is described in
-[the LXC notes in cuos](https://github.com/cuos-dev/cuos/blob/development/docs/common/lxc-deployment.md).
+[the LXC notes in cuos](https://github.com/cuos-dev/cuos/blob/HEAD/docs/common/lxc-deployment.md).
 
 ## Build
 

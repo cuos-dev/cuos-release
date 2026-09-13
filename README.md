@@ -64,7 +64,7 @@ to run your own instead, name it in the same key:
 ```
 
 What such a container has to look like:
-[Your CuOS Init App](https://github.com/cuos-dev/cuos/blob/development/docs/common/cuos-init-app.md).
+[Your CuOS Init App](https://github.com/cuos-dev/cuos/blob/HEAD/docs/common/cuos-init-app.md).
 
 Build a disk image:
 
@@ -139,7 +139,7 @@ boot path.
 ## Configuration
 
 `system.json` describes one system. Every key is documented in the
-[system.json reference](https://github.com/cuos-dev/cuos/blob/development/docs/common/system-json-reference.md).
+[system.json reference](https://github.com/cuos-dev/cuos/blob/HEAD/docs/common/system-json-reference.md).
 
 **Compose, do not copy.** A configuration can pull in others with `#include`,
 a list of paths relative to the including file:

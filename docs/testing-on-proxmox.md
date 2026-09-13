@@ -124,7 +124,7 @@ default**.
 
 They describe where a guest goes, not how the system behaves, so the OS
 never reads them and they are deliberately **not** in
-[`system-schema.json`](https://github.com/cuos-dev/cuos/blob/development/system/cuos/system-schema.json).
+[`system-schema.json`](https://github.com/cuos-dev/cuos/blob/HEAD/system/cuos/system-schema.json).
 The schema does not forbid extra keys, so a configuration carrying a `proxmox`
 object still validates. They are documented here and nowhere else.
 
