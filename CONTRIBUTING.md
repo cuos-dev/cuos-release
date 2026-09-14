@@ -46,7 +46,7 @@ If you encounter a bug or have a feature request:
 ## ✨ Submitting Pull Requests
 
   1 Create a new branch off `development`:
-    `git checkout development && git checkout -b feature/your-feature-name`
+    `git checkout -b feature/your-feature-name origin/development`
 
   2 Make your changes and commit them:
     `git commit -m "feat: your feature description"`
