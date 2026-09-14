@@ -242,7 +242,7 @@ or destroyed.
 ## Building several systems from one configuration
 
 The artefact name, and therefore the guest name, comes from the configuration
-([Naming](../README.md#naming)). A second variant is a second file that includes
+([Naming](../README.md#naming)). A second system is a second file that includes
 the first and changes `system_name`:
 
 ```json
@@ -276,6 +276,6 @@ Both guests exist side by side, each found by its own name.
 
 ## See also
 
-- [LXC and Proxmox](lxc-proxmox.md) — the container variant, and the same steps by hand
+- [LXC and Proxmox](lxc-proxmox.md) — CuOS in a container, and the same steps by hand
 - [Building an installer](building-installers.md)
 - [Building disk images](building-images.md)

@@ -4,7 +4,7 @@ CuOS can run as an LXC container instead of on its own disk. The build produces
 a container root filesystem rather than a partitioned image, so there is no
 kernel, no bootloader and no partition table involved.
 
-How the container variant differs from a normal CuOS system is described in
+How CuOS in a container differs from a normal CuOS system is described in
 [the LXC notes in cuos](https://github.com/cuos-dev/cuos/blob/HEAD/docs/common/lxc-deployment.md).
 
 ## Build
