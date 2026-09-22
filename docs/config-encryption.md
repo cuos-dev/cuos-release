@@ -3,8 +3,8 @@
 Everything in `system.json` ends up in the built artefact, and everything in
 your IaC repository ends up on the device — including whatever you put there in
 plain text. `config-encrypt` lets you commit a secret file as ciphertext and
-have it opened again where it is needed: on your own machine, and on the running
-device.
+have it opened again where it is needed: on your own machine, and — with CuOS
+IaC as the Init App — on the running device.
 
 ```sh
 ./cuos-release/tool.sh config-encrypt-init my-system.json   # once per repository
@@ -26,6 +26,7 @@ The whole workflow, and how much of it is yours:
 | 3 | [Encrypt what you want to keep secret](#encrypting-files) — `config-encrypt`, commit the `.enc` | whenever a secret changes or a new one appears |
 | 4 | Build the image | as always — the secrets come along by themselves |
 | 5 | The device decrypts its files | nothing to do |
+| — | [Change the passphrase](#changing-the-passphrase) — `config-sign`, pasted into the WebUI | only after a leak or a leaver |
 
 Steps 4 and 5 need no encryption-specific action at all:
 `./cuos-release/tool.sh image my-system.json` is the whole of step 4, and the
@@ -33,10 +34,25 @@ device does step 5 on its own — see
 [How it gets onto the device](#how-it-gets-onto-the-device). On a second
 machine, [one command](#on-another-machine) precedes all of it.
 
+## This is a CuOS IaC feature
+
+`config-encrypt` itself is generic — it encrypts a file, nothing more. What
+makes the round trip work is the other end: **the CuOS IaC manager** reads
+`system_file_password` from the configuration and decrypts the repository it
+deploys. That is the only thing on a device that does so.
+
+CuOS IaC is one [CuOS Init App](https://github.com/cuos-dev/cuos/blob/HEAD/docs/common/cuos-init-app.md)
+among others, and it is the one `release.json` pins by default. **Run your own
+Init App and none of this happens by itself**: `system_file_password` is then
+just a key in your configuration, and decrypting anything is your app's job.
+`config-encrypt` and `config-decrypt` still work on your own machine, but the
+device does nothing with an `.enc` unless you write the code that does.
+
 ## Prerequisites
 
 - `openssl` and `jq`
 - A `system.json`. `config-encrypt-init` edits it.
+- For the round trip on the device: CuOS IaC as the Init App.
 
 ## Setting it up, once per repository
 
@@ -225,6 +241,87 @@ while it runs. Anyone who can read the image or the running system reads the
 secrets. For that, see the disk encryption work in the CuOS repository — not
 this.
 
+## Changing the passphrase
+
+Someone leaves, or the passphrase leaks. Replacing it is not a normal commit,
+and the reason is worth understanding before the steps.
+
+**The repository cannot carry its own replacement.** The obvious move is to put
+a new passphrase into `system_secrets.json`, encrypt, commit, let the devices
+pick it up. It does not work: `system_secrets.json.enc` is encrypted with the
+**old** passphrase, because that is the one the devices still have. Anyone with
+the old passphrase and read access to the repository — exactly the person you
+are locking out — decrypts it and reads the new one. Every route through the
+git repository has this shape.
+
+So the new passphrase has to reach the devices on a path the old one does not
+protect. That path is a **signed configuration**, verified against
+`iac_repo_signing_keys` and pasted into the WebUI.
+
+Also: **rotating the passphrase alone is pointless.** Whoever had it has already
+read every secret it opened. Re-encrypting the same tokens and keys under a new
+passphrase protects nothing. Regenerate the secrets themselves — that is the
+work; the passphrase is the small part.
+
+### The steps
+
+1. **Regenerate every secret.** New repository tokens or deploy keys, new
+   service credentials, new TLS keys, new API tokens — everything that was
+   encrypted under the old passphrase, and anything else the person could read.
+   Revoke the old ones at the issuing end.
+2. **Regenerate the passphrase.** Write a new one into `system_file_password.txt`
+   and into `system_secrets.json` as `system_file_password` — both, they must
+   match. Store the new one as in step 2 of the workflow above.
+3. **Re-encrypt everything** with the new passphrase and commit the `.enc`
+   files. Devices in the field cannot read them yet; that is expected and it is
+   the point.
+4. **Remove the leaver's signing key** from `iac_repo_signing_keys` in the same
+   change, if they had one. A signed configuration replaces the list wholesale,
+   so dropping an entry works — see the merge note below.
+5. **Sign the configuration:**
+
+   ```sh
+   ./cuos-release/tool.sh config-sign my-system.json
+   ```
+
+   This prints one line: the merged configuration and an SSH signature over it,
+   base64url, separated by a dot. It signs with `~/.ssh/id_ed25519` unless
+   `IAC_SIGNKEY_PATH` says otherwise. The output contains the new passphrase in
+   clear — it is signed, not encrypted.
+
+6. **Paste it into the WebUI**, on the *Config* page (`/config`), and submit.
+   Per device.
+
+The device verifies the signature against the keys from `iac_repo_signing_keys`,
+merges the configuration, and applies it. From then on it holds the new
+passphrase and can read the `.enc` files you committed in step 3.
+
+### What can go wrong
+
+- **`iac_repo_signing_keys` has to be set on the device already.** The manager
+  writes those keys out only when the list is non-empty; with no list there is
+  nothing to verify against and the paste is rejected with *no principal
+  identified*. A device that never had signing keys configured cannot be
+  rotated this way — it has to be reinstalled.
+- **The signature expires after 15 minutes.** `config-sign` stamps the payload
+  with `iat`, and the device accepts it from one minute before to fifteen
+  minutes after. Sign, then paste — do not sign ahead of a maintenance window,
+  and check the device's clock if it is refused.
+- **Your own signing key must be in the list**, not just the leaver's removed.
+- **The configuration is merged, not replaced.** Keys you send overwrite, keys
+  you omit stay as they were — so this cannot delete a key from a device's
+  configuration. Lists are the exception: a list you send replaces the old one
+  entirely, which is what makes step 4 work.
+- **It is one paste per device.** For a fleet, weigh this against reinstalling.
+
+### Or reinstall
+
+Building a fresh image with the new secrets and installing it is the other
+answer, and for a small number of reachable devices it is often the simpler one.
+It needs no signing key, no WebUI access and no clock. Signing wins when the
+devices are remote, numerous enough that travel hurts, or must not lose their
+state.
+
 ## The algorithm
 
 `openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt`, passphrase-derived key,
@@ -241,11 +338,9 @@ openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 \
 
 - **One passphrase per repository, for every file.** There is no per-file key
   and no way to give someone one file without giving them all of them.
-- **Rotating it is manual**: decrypt everything with the old passphrase, replace
-  `system_file_password.txt` and the `system_file_password` key in
-  `system_secrets.json`, re-encrypt everything, rebuild. Devices in the field
-  keep the old passphrase until they are updated with a configuration carrying
-  the new one.
+- **Changing the passphrase cannot go through the repository** — the new one
+  would be encrypted with the old. See
+  [Changing the passphrase](#changing-the-passphrase).
 - **The passphrase lookup starts at the working directory, not at the
   configuration.** With a `system.json` in a subdirectory, run `config-encrypt`
   and `config-decrypt` from that directory, or set `IAC_FILE_PASSPHRASE`.
