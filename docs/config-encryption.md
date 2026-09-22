@@ -55,8 +55,12 @@ five things behind:
 | `"#include"` in `system.json` | `./system_secrets.json` appended, so the secrets are merged into every build. |
 | `.gitignore` | The two plaintext files added. |
 
-It refuses to run twice: an existing `system_file_password.txt` is an error, so
-a second run cannot replace the passphrase of files you can no longer open.
+The `.gitignore` is the one next to the configuration file — created if it is
+not there, appended to if it is, and never the same entry twice.
+
+It refuses to run twice: an existing `system_file_password.txt` (exit 2) or an
+existing `system_secrets.json.enc` (exit 3) stops it, so a second run cannot
+replace the passphrase of files you would then no longer be able to open.
 
 ## Keep the passphrase somewhere else
 
@@ -242,8 +246,8 @@ openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 \
   `system_secrets.json`, re-encrypt everything, rebuild. Devices in the field
   keep the old passphrase until they are updated with a configuration carrying
   the new one.
-- **`config-encrypt-init` writes `.gitignore` entries next to the configuration
-  file.** If your `system.json` is not in the repository root, check them — the
-  paths are written relative to the root, into a `.gitignore` that is not there.
+- **The passphrase lookup starts at the working directory, not at the
+  configuration.** With a `system.json` in a subdirectory, run `config-encrypt`
+  and `config-decrypt` from that directory, or set `IAC_FILE_PASSPHRASE`.
 - **`config-decrypt-all` writes `.git/info/exclude` wholesale**, replacing what
   that file contained. It is a generated file here, not one to edit.
