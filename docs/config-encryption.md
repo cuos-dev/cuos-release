@@ -199,9 +199,9 @@ command that reads the configuration fails with `File not found:
 .../system_secrets.json` until the secrets have been decrypted once.
 
 `config-decrypt-all` finds every `*.enc` below the current directory, decrypts
-it, and writes the plaintext names into `.git/info/exclude`, so the files it
-just created cannot be committed by accident. `config-decrypt FILE` does one
-file, named with or without `.enc`.
+it, and lists the plaintext names in its own block of `.git/info/exclude`, so
+the files it just created cannot be committed by accident. `config-decrypt FILE`
+does one file, named with or without `.enc`.
 
 A file is skipped when its plaintext is **newer** than the `.enc`, so local
 edits survive a `config-decrypt-all`. The flip side: a stale plaintext is not
@@ -218,13 +218,11 @@ search on disk reaches is **not** the same everywhere:
 | | Looks in |
 |---|---|
 | `config-encrypt` | the current directory, then one and two levels up |
-| `config-decrypt-all` | the same three levels |
-| `config-decrypt` | **the current directory only** |
+| `config-decrypt`, `config-decrypt-all` | **the current directory only** |
 
-The search upwards is what lets you work inside a subdirectory of the
-repository. `config-decrypt` does not do it, so decrypting a single file means
-standing in its system's directory — or naming the passphrase in the
-environment, as CI would:
+So you can encrypt from inside a subdirectory of the repository, but decrypting
+means standing where the passphrase is — or naming it in the environment, as CI
+would:
 
 ```sh
 IAC_FILE_PASSPHRASE="$(cat "$RUNNER_SECRET")" ./cuos-release/tool.sh config-decrypt-all
@@ -348,5 +346,7 @@ openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 \
   [Changing the passphrase](#changing-the-passphrase).
 - **The passphrase lookup starts at the working directory**, not at the
   configuration, and `config-decrypt` alone does not search upwards.
-- **`config-decrypt-all` writes `.git/info/exclude` wholesale**, replacing what
-  that file contained. It is a generated file here, not one to edit.
+- **`config-decrypt-all` owns one block of `.git/info/exclude`**, between
+  `# BEGIN cuos config-decrypt` and `# END cuos config-decrypt`. Everything
+  outside it is yours and is kept; editing inside it is pointless, as the next
+  run rewrites it.

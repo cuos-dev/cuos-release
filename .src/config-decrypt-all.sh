@@ -33,5 +33,25 @@ exclude_file="$(git rev-parse --git-dir)/info/exclude"
 enc_files="$(find . -type f -iname \*.enc | \
   sed -e 's/\.enc$//' -e 's|^\./|/|')"
 
-echo "${enc_files}" >"${exclude_file}"
+# The exclude file belongs to whoever works in this clone as well, so only the
+# block between the markers is this command's to rewrite. Anything outside it -
+# including an earlier block, which is removed first - is carried over.
+exclude_begin="# BEGIN cuos config-decrypt"
+exclude_end="# END cuos config-decrypt"
+
+kept=""
+if [[ -f "${exclude_file}" ]]; then
+  kept="$(sed -e "/^${exclude_begin}\$/,/^${exclude_end}\$/d" "${exclude_file}")"
+fi
+
+{
+  if [[ -n "${kept}" ]]; then
+    echo "${kept}"
+  fi
+  echo "${exclude_begin}"
+  if [[ -n "${enc_files}" ]]; then
+    echo "${enc_files}"
+  fi
+  echo "${exclude_end}"
+} >"${exclude_file}"
 

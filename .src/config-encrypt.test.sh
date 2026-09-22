@@ -49,6 +49,17 @@ grep_of() {
   grep -F -- "$2" "$1" 2>/dev/null || true
 }
 
+occurrences() {
+  grep -c -- "$2" "$1" 2>/dev/null || true
+}
+
+# Only what config-decrypt-all claims in the exclude file. What surrounds it is
+# git's template and whatever the person put there, and is asserted separately.
+block_of() {
+  sed -n '/^# BEGIN cuos config-decrypt$/,/^# END cuos config-decrypt$/p' "$1" \
+    2>/dev/null
+}
+
 # --- the round trip ----------------------------------------------------------
 
 ROUND="$(new_secret)"
@@ -204,17 +215,46 @@ expect "decrypt-all: and one further down" "KEY=private" \
 # The plaintexts it just created must not be committable by accident, wherever
 # they are and whether or not a .gitignore covers them.
 # Anchored and without find's "./", or git matches none of them - which is what
-# the assertion below actually proves.
+# the assertion after it actually proves.
 expect "decrypt-all: every plaintext is excluded from the clone" \
-  "/iac/.env
-/iac/certs/server.key" \
-  contents_of "${ALL}/.git/info/exclude"
+  "# BEGIN cuos config-decrypt
+/iac/.env
+/iac/certs/server.key
+# END cuos config-decrypt" \
+  block_of "${ALL}/.git/info/exclude"
+
+# git puts a commented template in that file when it creates the repository.
+expect "decrypt-all: git's own template is left alone" "1" \
+  occurrences "${ALL}/.git/info/exclude" "^# Lines that start with"
 
 expect "decrypt-all: git sees only the ciphertexts" \
   "?? iac/.env.enc
 ?? iac/certs/server.key.enc
 ?? system_file_password.txt" \
   git -C "${ALL}" status --short --untracked-files=all
+
+# The exclude file is the clone's, not this command's: what someone put there
+# by hand survives, and a second run does not stack block on block.
+KEEP="$(mktemp -d "${TMP}/keep.XXXXXX")"
+git -C "${KEEP}" init -q
+mkdir -p "${KEEP}/iac"
+printf 'TOKEN=hunter2\n' >"${KEEP}/iac/.env"
+encrypt "${KEEP}/iac/.env"
+rm -f "${KEEP}/iac/.env"
+printf '%s\n' "${PASSPHRASE}" >"${KEEP}/system_file_password.txt"
+printf '/scratch.md\n' >"${KEEP}/.git/info/exclude"
+( cd "${KEEP}" && quietly "${SCRIPT_DIR}/config-decrypt-all.sh" )
+( cd "${KEEP}" && quietly "${SCRIPT_DIR}/config-decrypt-all.sh" )
+
+expect "decrypt-all: an entry of one's own survives two runs" \
+  "/scratch.md
+# BEGIN cuos config-decrypt
+/iac/.env
+# END cuos config-decrypt" \
+  contents_of "${KEEP}/.git/info/exclude"
+
+expect "decrypt-all: and the block is written once, not stacked" "1" \
+  occurrences "${KEEP}/.git/info/exclude" "^# BEGIN cuos config-decrypt$"
 
 NOPASS="$(mktemp -d "${TMP}/nopass.XXXXXX")"
 git -C "${NOPASS}" init -q
