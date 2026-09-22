@@ -186,6 +186,11 @@ Artefacts are named `<product_name>-<system_name>`, both optional:
 `console_expert_password` (`-e`). Run `./cuos-release/tool.sh help` for the full list of
 commands.
 
+A secret belongs in the repository as ciphertext, not as a token in
+`system.json`. `config-encrypt-init` sets that up once, and the device opens the
+files by itself — see
+[Encrypting configuration at rest](docs/config-encryption.md).
+
 ## Using it in your own repository
 
 Keep your system definitions in your own repository and add this one as a
