@@ -66,9 +66,8 @@ five things behind:
 | `"#include"` in `system.json` | `./system_secrets.json` appended, so the secrets are merged into every build. |
 | `.gitignore` | The one next to the configuration, with the two plaintexts added. |
 
-It refuses to run twice: an existing `system_file_password.txt` (exit 2) or
-`system_secrets.json.enc` (exit 3) stops it, so a second run cannot replace the
-passphrase of files you would then no longer be able to open.
+It refuses to run a second time where either of those already exists, so it
+cannot replace the passphrase of files you would then no longer be able to open.
 
 ### One passphrase per system
 
@@ -198,10 +197,10 @@ and a missing include is a fatal error — so in a fresh clone every `tool.sh`
 command that reads the configuration fails with `File not found:
 .../system_secrets.json` until the secrets have been decrypted once.
 
-`config-decrypt-all` finds every `*.enc` below the current directory, decrypts
-it, and lists the plaintext names in its own block of `.git/info/exclude`, so
-the files it just created cannot be committed by accident. `config-decrypt FILE`
-does one file, named with or without `.enc`.
+`config-decrypt-all` finds every `*.enc` below the current directory and
+decrypts it. The plaintexts it creates are kept out of git for you, so none of
+them can be committed by accident. `config-decrypt FILE` does one file, named
+with or without `.enc`.
 
 A file is skipped when its plaintext is **newer** than the `.enc`, so local
 edits survive a `config-decrypt-all`. The flip side: a stale plaintext is not
@@ -240,7 +239,7 @@ itself:
    if you sign.
 3. On the device the IaC manager reads `system_file_password` from it, clones
    your IaC repository, and decrypts every `*.enc` in it before the services
-   start. The plaintext names go into that clone's `.git/info/exclude`.
+   start.
 
 The files must have been encrypted with **this** system's passphrase. An `.enc`
 belonging to another system is skipped with a warning and the service that
@@ -292,10 +291,9 @@ costs one system's secrets and one paste, not every system's.
    ./cuos-release/tool.sh config-sign my-system.json
    ```
 
-   It prints one line: the merged configuration and an SSH signature over it,
-   base64url, separated by a dot. Signs with `~/.ssh/id_ed25519` unless
-   `IAC_SIGNKEY_PATH` says otherwise. The output contains the new passphrase in
-   clear — it is signed, not encrypted.
+   It prints one line: the merged configuration and an SSH signature over it.
+   Signs with `~/.ssh/id_ed25519` unless `IAC_SIGNKEY_PATH` says otherwise. The
+   output contains the new passphrase in clear — it is signed, not encrypted.
 
 6. **Paste it into the WebUI**, on the *Config* page (`/config`). Per device.
 
@@ -305,13 +303,11 @@ step 3.
 
 ### What can go wrong
 
-- **`iac_repo_signing_keys` has to be set on the device already.** The manager
-  writes those keys out only when the list is non-empty; with no list there is
-  nothing to verify against and the paste is rejected with *no principal
-  identified*. Such a device has to be reinstalled.
-- **The signature expires after 15 minutes** — `config-sign` stamps it with
-  `iat`, accepted from a minute before to fifteen minutes after. Sign, then
-  paste; check the device's clock if it is refused.
+- **`iac_repo_signing_keys` has to be set on the device already.** With no list
+  there is nothing to verify a signature against, and the paste is rejected with
+  *no principal identified*. Such a device has to be reinstalled.
+- **The signature expires after 15 minutes.** Sign, then paste; check the
+  device's clock if it is refused.
 - **Your own signing key must be in the list**, not just the leaver's removed.
 - **The configuration is merged, not replaced.** Keys you send overwrite, keys
   you omit stay — so this cannot delete one. Lists are the exception: a list
@@ -346,7 +342,6 @@ openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 \
   [Changing the passphrase](#changing-the-passphrase).
 - **The passphrase lookup starts at the working directory**, not at the
   configuration, and `config-decrypt` alone does not search upwards.
-- **`config-decrypt-all` owns one block of `.git/info/exclude`**, between
-  `# BEGIN cuos config-decrypt` and `# END cuos config-decrypt`. Everything
-  outside it is yours and is kept; editing inside it is pointless, as the next
-  run rewrites it.
+- **A decrypted plaintext is kept out of git automatically**, but only in the
+  clone it was decrypted in. The `.gitignore` is what carries that to everyone
+  else, so add the files you encrypt to it.
