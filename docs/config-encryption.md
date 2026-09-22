@@ -17,6 +17,22 @@ One passphrase opens everything. It is generated once, kept out of git, and
 carried to the device inside the built configuration — which is why nothing has
 to be typed on the device.
 
+The whole workflow, and how much of it is yours:
+
+| | | |
+|---|---|---|
+| 1 | [Set it up](#setting-it-up-once-per-repository) — `config-encrypt-init` | once per repository |
+| 2 | [Put the passphrase somewhere safe](#keep-the-passphrase-somewhere-else) | once, by hand, outside this repository |
+| 3 | [Encrypt what you want to keep secret](#encrypting-files) — `config-encrypt`, commit the `.enc` | whenever a secret changes or a new one appears |
+| 4 | Build the image | as always — the secrets come along by themselves |
+| 5 | The device decrypts its files | nothing to do |
+
+Steps 4 and 5 need no encryption-specific action at all:
+`./cuos-release/tool.sh image my-system.json` is the whole of step 4, and the
+device does step 5 on its own — see
+[How it gets onto the device](#how-it-gets-onto-the-device). On a second
+machine, [one command](#on-another-machine) precedes all of it.
+
 ## Prerequisites
 
 - `openssl` and `jq`
@@ -42,15 +58,31 @@ five things behind:
 It refuses to run twice: an existing `system_file_password.txt` is an error, so
 a second run cannot replace the passphrase of files you can no longer open.
 
-**Put the passphrase somewhere safe before you do anything else** — a password
-manager, or `gpg`, as the command's own closing message asks. `system_secrets.json.enc`
-is encrypted with the passphrase it contains, so losing `system_file_password.txt`
-loses every encrypted file with it. It is also the one file a new colleague
-needs, and the one file that must never be committed.
+## Keep the passphrase somewhere else
 
-## Working with secrets
+**Do this before anything else, and do it by hand** — it is the one step no
+command performs for you, and `config-encrypt-init` closes by asking for it:
 
-Keep the secrets in `system_secrets.json` and they reach the configuration by
+- into a password manager, or
+- as a file encrypted with `gpg`, kept outside this repository
+
+`system_file_password.txt` itself stays where it is, git-ignored, so the tooling
+keeps finding it. The copy is what survives a lost laptop or a re-clone.
+
+Why it matters more than it looks: `system_secrets.json.enc` is encrypted with
+the passphrase it contains, so the passphrase cannot be recovered from anything
+in the repository. Lose it and every encrypted file is lost with it. It is also
+the one thing a new colleague needs — and the one file that must never be
+committed.
+
+## Encrypting files
+
+Two kinds of file go through `config-encrypt`, and they differ only in what
+happens to them afterwards.
+
+### Secrets that belong in the configuration
+
+Keep them in `system_secrets.json` and they reach the configuration by
 themselves — the `#include` makes them part of the merge, so a key put there can
 be used like any other `system.json` key:
 
@@ -65,15 +97,42 @@ encrypts, it does not replace. So the two files exist side by side, the
 plaintext ignored by git and the `.enc` committed; after every edit the
 `config-encrypt` has to be repeated, or the commit carries the old secret.
 
-The same works for any other file in the repository — an `.env`, a key, a whole
-compose file:
+### Any other file
+
+`config-encrypt` takes a path, not a format — nothing about it is specific to
+JSON or to `system.json`. So anything a service needs but nobody should read in
+git goes the same way:
 
 ```sh
-./cuos-release/tool.sh config-encrypt iac/.env   # → iac/.env.enc
+./cuos-release/tool.sh config-encrypt iac/.env               # → iac/.env.enc
+./cuos-release/tool.sh config-encrypt iac/ssh/id_ed25519
+./cuos-release/tool.sh config-encrypt iac/certs/server.key   # the HTTPS private key
+./cuos-release/tool.sh config-encrypt iac/app/license.dat
 ```
 
-Those files are not merged into the configuration; they are decrypted **on the
-device**, in place, next to their `.enc` (see below).
+Typical: `.env` files with service credentials, SSH private keys and deploy
+keys, TLS/HTTPS private keys and certificates, API tokens, licence files,
+VPN configurations.
+
+These are **not** merged into the configuration — they stay files. Commit the
+`.enc`, ignore the plaintext, and the device puts each one back exactly where it
+was, next to its `.enc` and under its original name, before the services start.
+A service that reads `./certs/server.key` therefore needs no change: on the
+device the file is simply there.
+
+Only `config-encrypt-init` writes `.gitignore`, and only for its own two files.
+For everything you encrypt afterwards, ignoring the plaintext is your job:
+
+```gitignore
+# beside the .enc files you commit
+iac/.env
+iac/ssh/id_ed25519
+iac/certs/server.key
+```
+
+(On a clone, `config-decrypt-all` covers them too — it writes every name it
+decrypts into `.git/info/exclude`. The `.gitignore` is what protects the machine
+the file was *created* on.)
 
 Check what a build will really use — the merged configuration, secrets included:
 
@@ -128,8 +187,15 @@ IAC_FILE_PASSPHRASE="$(cat "$RUNNER_SECRET")" ./cuos-release/tool.sh config-decr
 
 ## How it gets onto the device
 
-Nothing is typed on the device, and no key is copied to it separately. The chain
-is the configuration itself:
+**Steps 4 and 5 are automatic.** Build the image as you always would —
+
+```sh
+./cuos-release/tool.sh image my-system.json
+```
+
+— and that is everything you do. No key is copied to the device, nothing is
+typed on it, and no `config-decrypt` is run there by hand. The chain is the
+configuration itself:
 
 1. `system_secrets.json` is `#include`d, so the merge puts `system_file_password`
    into the built configuration.
@@ -139,6 +205,10 @@ is the configuration itself:
    configuration, clones your IaC repository, and decrypts every `*.enc` in it
    before the services start. The plaintext names go into the clone's
    `.git/info/exclude`, exactly as `config-decrypt-all` does.
+
+The one thing that has to be true: the files must have been encrypted with
+**this** system's passphrase. An `.enc` from another configuration repository is
+skipped with a warning, and the service that wanted it starts without its file.
 
 So the device can open anything you encrypted with this passphrase, and the
 git repository never holds a plaintext secret.
