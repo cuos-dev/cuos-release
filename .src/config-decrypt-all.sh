@@ -29,15 +29,18 @@ exclude_file="$(git rev-parse --git-dir)/info/exclude"
 
 # Anchored at the repository root, and without the "./" find prints: git matches
 # an exclude pattern against the path from the root, so "./iac/.env" matches
-# nothing at all.
+# nothing at all. Sorted, because find lists in the filesystem's order.
 enc_files="$(find . -type f -iname \*.enc | \
-  sed -e 's/\.enc$//' -e 's|^\./|/|')"
+  sed -e 's/\.enc$//' -e 's|^\./|/|' | LC_ALL=C sort)"
 
 # The exclude file belongs to whoever works in this clone as well, so only the
 # block between the markers is this command's to rewrite. Anything outside it -
 # including an earlier block, which is removed first - is carried over.
 exclude_begin="# BEGIN cuos config-decrypt"
 exclude_end="# END cuos config-decrypt"
+
+# git creates info/ only from its templates, and a clone can be without them.
+mkdir -p "$(dirname "${exclude_file}")"
 
 kept=""
 if [[ -f "${exclude_file}" ]]; then

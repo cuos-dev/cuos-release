@@ -206,6 +206,10 @@ encrypt "${ALL}/iac/.env"
 encrypt "${ALL}/iac/certs/server.key"
 rm -f "${ALL}/iac/.env" "${ALL}/iac/certs/server.key"
 printf '%s\n' "${PASSPHRASE}" >"${ALL}/system_file_password.txt"
+# git puts a commented template in that file when it creates the repository -
+# if it has its templates, which is not this test's to decide.
+TEMPLATE_LINES="$(occurrences "${ALL}/.git/info/exclude" "^# Lines that start with")"
+TEMPLATE_LINES="${TEMPLATE_LINES:-0}"
 ( cd "${ALL}" && quietly "${SCRIPT_DIR}/config-decrypt-all.sh" )
 
 expect "decrypt-all: a file at the top" "TOKEN=hunter2" contents_of "${ALL}/iac/.env"
@@ -223,8 +227,7 @@ expect "decrypt-all: every plaintext is excluded from the clone" \
 # END cuos config-decrypt" \
   block_of "${ALL}/.git/info/exclude"
 
-# git puts a commented template in that file when it creates the repository.
-expect "decrypt-all: git's own template is left alone" "1" \
+expect "decrypt-all: git's own template is left alone" "${TEMPLATE_LINES}" \
   occurrences "${ALL}/.git/info/exclude" "^# Lines that start with"
 
 expect "decrypt-all: git sees only the ciphertexts" \
@@ -242,6 +245,7 @@ printf 'TOKEN=hunter2\n' >"${KEEP}/iac/.env"
 encrypt "${KEEP}/iac/.env"
 rm -f "${KEEP}/iac/.env"
 printf '%s\n' "${PASSPHRASE}" >"${KEEP}/system_file_password.txt"
+mkdir -p "${KEEP}/.git/info"
 printf '/scratch.md\n' >"${KEEP}/.git/info/exclude"
 ( cd "${KEEP}" && quietly "${SCRIPT_DIR}/config-decrypt-all.sh" )
 ( cd "${KEEP}" && quietly "${SCRIPT_DIR}/config-decrypt-all.sh" )
@@ -255,6 +259,23 @@ expect "decrypt-all: an entry of one's own survives two runs" \
 
 expect "decrypt-all: and the block is written once, not stacked" "1" \
   occurrences "${KEEP}/.git/info/exclude" "^# BEGIN cuos config-decrypt$"
+
+# A repository made without git's templates has no info/ directory at all.
+BARE="$(mktemp -d "${TMP}/bare.XXXXXX")"
+git -C "${BARE}" init -q
+rm -rf "${BARE}/.git/info"
+mkdir -p "${BARE}/iac"
+printf 'TOKEN=hunter2\n' >"${BARE}/iac/.env"
+encrypt "${BARE}/iac/.env"
+rm -f "${BARE}/iac/.env"
+printf '%s\n' "${PASSPHRASE}" >"${BARE}/system_file_password.txt"
+( cd "${BARE}" && quietly "${SCRIPT_DIR}/config-decrypt-all.sh" )
+
+expect "decrypt-all: a clone without info/ still gets its exclude block" \
+  "# BEGIN cuos config-decrypt
+/iac/.env
+# END cuos config-decrypt" \
+  block_of "${BARE}/.git/info/exclude"
 
 NOPASS="$(mktemp -d "${TMP}/nopass.XXXXXX")"
 git -C "${NOPASS}" init -q
