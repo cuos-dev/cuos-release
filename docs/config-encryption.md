@@ -137,10 +137,21 @@ working directory upwards — so work from the system's directory, or set
 command performs for you, and `config-encrypt-init` closes by asking for it:
 
 - into a password manager, or
-- as a file encrypted with `gpg`, kept outside this repository
+- as a file encrypted with `gpg`
+
+```sh
+gpg --encrypt --armor -r you@example.com -r colleague@example.com \
+  -o systems/gateway-01/system_file_password.txt.asc \
+  systems/gateway-01/system_file_password.txt
+```
+
+**The `.asc` may be committed.** That is what encrypting it is for, and keeping
+it beside the configuration is how a colleague finds it at all. Name every
+person who is to have it as a recipient, and re-encrypt to fewer recipients when
+someone leaves.
 
 `system_file_password.txt` itself stays where it is, git-ignored, so the tooling
-keeps finding it. The copy is what survives a lost laptop or a re-clone.
+keeps finding it. The `.asc` is what survives a lost laptop or a re-clone.
 
 Why it matters more than it looks: `system_secrets.json.enc` is encrypted with
 the passphrase it contains, so the passphrase cannot be recovered from anything
@@ -193,6 +204,46 @@ was, next to its `.enc` and under its original name, before the services start.
 A service that reads `./certs/server.key` therefore needs no change: on the
 device the file is simply there.
 
+#### A `.env`, start to finish
+
+The common case, in full. Write the file, encrypt it, ignore the plaintext,
+commit the ciphertext:
+
+```sh
+cd systems/gateway-01          # where this system's passphrase lives
+
+cat >iac/.env <<'EOF'
+POSTGRES_PASSWORD=s3cr3t
+SMTP_TOKEN=abc123
+EOF
+
+../../cuos-release/tool.sh config-encrypt iac/.env   # → iac/.env.enc
+echo '/iac/.env' >>.gitignore
+
+git add iac/.env.enc .gitignore
+git commit -m "feat: database and smtp credentials"
+```
+
+The service uses it exactly as it would without any of this — the device has
+put the plaintext back next to the `.enc` before compose runs:
+
+```yaml
+services:
+  app:
+    image: "ghcr.io/your-org/app:1.2.3"
+    env_file: .env
+```
+
+Changing a value means editing `iac/.env` and running `config-encrypt` again;
+the plaintext is not what gets committed, so an edit without the re-encrypt
+changes nothing:
+
+```sh
+$EDITOR iac/.env
+../../cuos-release/tool.sh config-encrypt iac/.env
+git commit -am "feat: rotate the smtp token"
+```
+
 Only `config-encrypt-init` writes `.gitignore`, and only for its own two files.
 For everything you encrypt afterwards, ignoring the plaintext is your job:
 
@@ -241,18 +292,27 @@ decrypt again if in doubt.
 
 ### Where the passphrase comes from
 
-Every one of the four commands looks for it in the same order and takes the
-first it finds:
+Each command looks in the same order and takes the first it finds:
 
 1. `IAC_FILE_PASSPHRASE` in the environment
-2. `system_file_password.txt` — in the current directory, then one and two
-   levels up
-3. `.system_file_password` in `system_secrets.json` — same three levels
+2. `system_file_password.txt` on disk
+3. `.system_file_password` in `system_secrets.json`
 4. a prompt
 
-The search upwards is what lets you work inside a subdirectory of the
-configuration repository. For CI, set the environment variable and no file is
-needed:
+How far the search on disk reaches is **not** the same everywhere:
+
+| | Looks in |
+|---|---|
+| `config-encrypt` | the current directory, then one and two levels up |
+| `config-decrypt-all` | the same three levels |
+| `config-decrypt` | **the current directory only** |
+
+The search upwards is what lets you encrypt from inside a subdirectory of the
+configuration repository. `config-decrypt` does not do it, so decrypting a
+single file means standing in its system's directory — or naming the passphrase
+in the environment. After a clone, reach for `config-decrypt-all` anyway.
+
+For CI, set the environment variable and no file is needed:
 
 ```sh
 IAC_FILE_PASSPHRASE="$(cat "$RUNNER_SECRET")" ./cuos-release/tool.sh config-decrypt-all
@@ -404,7 +464,8 @@ openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 \
   would be encrypted with the old. See
   [Changing the passphrase](#changing-the-passphrase).
 - **The passphrase lookup starts at the working directory, not at the
-  configuration.** With a `system.json` in a subdirectory, run `config-encrypt`
-  and `config-decrypt` from that directory, or set `IAC_FILE_PASSPHRASE`.
+  configuration**, and `config-decrypt` alone does not search upwards. With a
+  `system.json` in a subdirectory, work from that directory or set
+  `IAC_FILE_PASSPHRASE`.
 - **`config-decrypt-all` writes `.git/info/exclude` wholesale**, replacing what
   that file contained. It is a generated file here, not one to edit.

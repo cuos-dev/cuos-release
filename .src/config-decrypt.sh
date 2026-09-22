@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 file="$1"
-file="${file//.enc/}"
+file="${file%.enc}"
 encfile="${file}.enc"
 
 if test ! -f "${encfile}"; then

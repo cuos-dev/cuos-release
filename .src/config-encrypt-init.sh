@@ -70,8 +70,18 @@ L="${PASSWORD_LENGTH:-"25"}"
   export LC_ALL=C
   export LANG=C
 
-  # the dash goes last, or tr reads "_-+" as a range and refuses
-  SYSTEM_FILE_PASSWORD="$(openssl rand "$((L*8))" | tr -dc 'A-Za-z0-9._+-' | fold -w "$L" | head -n1)"
+  # Only about a quarter of random bytes survive the filter, and how many is
+  # itself random - one draw is not reliably enough for short passwords. Draw
+  # again until there is enough to cut from.
+  # The dash goes last, or tr reads "_-+" as a range and refuses.
+  SYSTEM_FILE_PASSWORD=""
+  for _ in 1 2 3 4 5; do
+    SYSTEM_FILE_PASSWORD+="$(openssl rand "$((L*8))" | tr -dc 'A-Za-z0-9._+-')"
+    if [[ "${#SYSTEM_FILE_PASSWORD}" -ge "$L" ]]; then
+      break
+    fi
+  done
+  SYSTEM_FILE_PASSWORD="${SYSTEM_FILE_PASSWORD:0:$L}"
 
   if [[ "${#SYSTEM_FILE_PASSWORD}" -ne "$L" ]]; then
     echo "Could not generate a password of ${L} characters." >&2

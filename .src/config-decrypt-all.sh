@@ -27,8 +27,11 @@ enc_files="$(find . -type f -iname \*.enc -exec "${SCRIPT_DIR}/config-decrypt.sh
 
 exclude_file="$(git rev-parse --git-dir)/info/exclude"
 
+# Anchored at the repository root, and without the "./" find prints: git matches
+# an exclude pattern against the path from the root, so "./iac/.env" matches
+# nothing at all.
 enc_files="$(find . -type f -iname \*.enc | \
-  sed -e 's/\.enc$//g')"
+  sed -e 's/\.enc$//' -e 's|^\./|/|')"
 
 echo "${enc_files}" >"${exclude_file}"
 
