@@ -7,21 +7,21 @@ have it opened again where it is needed: on your own machine, and — with CuOS
 IaC as the Init App — on the running device.
 
 ```sh
-./cuos-release/tool.sh config-encrypt-init my-system.json   # once per repository
+./cuos-release/tool.sh config-encrypt-init my-system.json   # once per system
 ./cuos-release/tool.sh config-encrypt      secrets.json     # after every change
 ./cuos-release/tool.sh config-decrypt      secrets.json     # get the plaintext back
 ./cuos-release/tool.sh config-decrypt-all                   # all of them, after a clone
 ```
 
-One passphrase opens everything. It is generated once, kept out of git, and
-carried to the device inside the built configuration — which is why nothing has
-to be typed on the device.
+One passphrase per system opens that system's files. It is generated once, kept
+out of git, and carried to the device inside the built configuration — which is
+why nothing has to be typed on the device.
 
 The whole workflow, and how much of it is yours:
 
 | | | |
 |---|---|---|
-| 1 | [Set it up](#setting-it-up-once-per-repository) — `config-encrypt-init` | once per repository |
+| 1 | [Set it up](#setting-it-up-once-per-system) — `config-encrypt-init` | once per system |
 | 2 | [Put the passphrase somewhere safe](#keep-the-passphrase-somewhere-else) | once, by hand, outside this repository |
 | 3 | [Encrypt what you want to keep secret](#encrypting-files) — `config-encrypt`, commit the `.enc` | whenever a secret changes or a new one appears |
 | 4 | Build the image | as always — the secrets come along by themselves |
@@ -54,11 +54,15 @@ device does nothing with an `.enc` unless you write the code that does.
 - A `system.json`. `config-encrypt-init` edits it.
 - For the round trip on the device: CuOS IaC as the Init App.
 
-## Setting it up, once per repository
+## Setting it up, once per system
 
 ```sh
 ./cuos-release/tool.sh config-encrypt-init my-system.json
 ```
+
+**Once per system, not once per repository** — a passphrase shared between
+systems is a system that can read another system's secrets, see
+[One passphrase per system](#one-passphrase-per-system).
 
 With no argument it uses `./system.json`. It works next to that file and leaves
 five things behind:
@@ -77,6 +81,55 @@ not there, appended to if it is, and never the same entry twice.
 It refuses to run twice: an existing `system_file_password.txt` (exit 2) or an
 existing `system_secrets.json.enc` (exit 3) stops it, so a second run cannot
 replace the passphrase of files you would then no longer be able to open.
+
+### One passphrase per system
+
+Give every system its own passphrase and its own `system_secrets.json`. The
+reason is the decryption on the device: a device decrypts **every** `*.enc` it
+finds in the IaC repository it deploys, with the one passphrase it carries. Two
+systems sharing a passphrase therefore read each other's files — and if they
+share the IaC repository, each device already has the other's ciphertext on its
+disk. A shared passphrase makes every system as exposed as the least trusted one
+that holds it.
+
+Separate passphrases make that automatic rather than a matter of discipline: a
+file encrypted for another system fails to decrypt, is skipped with a warning,
+and its plaintext never exists on this device.
+
+Keep each system in its own directory, and run `config-encrypt-init` in each:
+
+```
+systems/gateway-01/system.json               # "#include": ["./system_secrets.json"]
+systems/gateway-01/system_secrets.json       # git-ignored
+systems/gateway-01/system_secrets.json.enc   # committed
+systems/gateway-01/system_file_password.txt  # git-ignored, kept out of band
+systems/gateway-02/…                         # its own everything
+```
+
+```sh
+./cuos-release/tool.sh config-encrypt-init systems/gateway-01/system.json
+./cuos-release/tool.sh config-encrypt-init systems/gateway-02/system.json
+```
+
+Shared, non-secret configuration is `#include`d as usual — the split is between
+secrets and everything else, not between systems:
+
+```json
+{
+  "#include": ["../../common/network.json", "./system_secrets.json"],
+  "hostname": "gateway-01"
+}
+```
+
+For the secret *files* in the IaC repository the same rule holds: encrypt each
+system's `.env` or key with that system's passphrase. Where several systems
+genuinely need the same secret, encrypting it once per system — one `.enc` per
+passphrase — keeps the blast radius at one system when one passphrase goes.
+
+Note that each directory gets its own `system_file_password.txt` and its own
+`.gitignore` entry, and that `config-encrypt` looks for the passphrase from the
+working directory upwards — so work from the system's directory, or set
+`IAC_FILE_PASSPHRASE`.
 
 ## Keep the passphrase somewhere else
 
@@ -227,8 +280,9 @@ configuration itself:
    `.git/info/exclude`, exactly as `config-decrypt-all` does.
 
 The one thing that has to be true: the files must have been encrypted with
-**this** system's passphrase. An `.enc` from another configuration repository is
-skipped with a warning, and the service that wanted it starts without its file.
+**this** system's passphrase. An `.enc` belonging to another system is skipped
+with a warning, and the service that wanted it starts without its file — which
+is what keeps two systems in one IaC repository out of each other's secrets.
 
 So the device can open anything you encrypted with this passphrase, and the
 git repository never holds a plaintext secret.
@@ -262,6 +316,12 @@ Also: **rotating the passphrase alone is pointless.** Whoever had it has already
 read every secret it opened. Re-encrypting the same tokens and keys under a new
 passphrase protects nothing. Regenerate the secrets themselves — that is the
 work; the passphrase is the small part.
+
+**The work is per system**, and this is where
+[one passphrase per system](#one-passphrase-per-system) pays for itself: a
+leaked passphrase costs you one system's secrets and one paste. Had the systems
+shared it, every one of them would need the full procedure, and every secret of
+every system would have to be regenerated.
 
 ### The steps
 
@@ -336,8 +396,10 @@ openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 \
 
 ## Gotchas
 
-- **One passphrase per repository, for every file.** There is no per-file key
-  and no way to give someone one file without giving them all of them.
+- **One passphrase per system, for every one of that system's files.** There is
+  no per-file key, so anyone given a system's passphrase can read all of its
+  secrets. Across systems the separation is real — see
+  [One passphrase per system](#one-passphrase-per-system).
 - **Changing the passphrase cannot go through the repository** — the new one
   would be encrypted with the old. See
   [Changing the passphrase](#changing-the-passphrase).
