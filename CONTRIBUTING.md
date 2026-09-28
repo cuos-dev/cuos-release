@@ -45,14 +45,17 @@ If you encounter a bug or have a feature request:
 
 ## ✨ Submitting Pull Requests
 
-  1 Create a new branch:
-    `git checkout -b feature/your-feature-name`
+  1 Create a new branch off `development`:
+    `git checkout -b feature/your-feature-name origin/development`
 
   2 Make your changes and commit them:
     `git commit -m "feat: your feature description"`
 
   3 Sign off your commits with `git commit -s`. This is required for every
     commit — see [Developer Certificate of Origin (DCO)](DCO.txt).
+
+  4 Open the pull request against `development`. `main` carries the released
+    state only and is fast-forwarded from `development` at release time.
 
 ## 🤝 Community Guidelines
 
