@@ -147,8 +147,8 @@ expect_rc "mask_to_prefix: rejects nonsense" 1 fails mask_to_prefix not-a-mask
 # so the "network" section is Proxmox's to use.
 CONFIG='{"hostname":"c","network":[{"ip-address":"10.0.0.5","network-mask":"255.255.255.0","gateway":"10.0.0.1","dns-server":"10.0.0.1"}]}'
 resolve_placement
-expect "lxc_net0: the address comes from the network section" \
-  "name=eth0,bridge=vmbr0,ip=10.0.0.5/24,gw=10.0.0.1,ip6=manual" lxc_net0
+expect "lxc_net: the address comes from the network section" \
+  "name=eth0,bridge=vmbr0,ip=10.0.0.5/24,gw=10.0.0.1,ip6=manual" lxc_net 0
 expect "lxc_nameserver: one resolver from the network section" "10.0.0.1" \
   lxc_nameserver
 
@@ -157,34 +157,106 @@ resolve_placement
 expect "lxc_nameserver: a list becomes a space-separated one" "10.0.0.1 10.0.0.2" \
   lxc_nameserver
 
+CONFIG='{"hostname":"c","network":[{"dns-server":["10.0.0.1","10.0.0.2"]},{"dns-server":"10.0.0.2"},{"dns-server":"10.1.0.1"}]}'
+resolve_placement
+expect "lxc_nameserver: every entry's resolvers, in order and each once" \
+  "10.0.0.1 10.0.0.2 10.1.0.1" lxc_nameserver
+
 CONFIG='{"hostname":"c","network":[{"dhcp":true}]}'
 resolve_placement
-expect "lxc_net0: dhcp in the network section" \
-  "name=eth0,bridge=vmbr0,ip=dhcp,ip6=manual" lxc_net0
+expect "lxc_net: dhcp in the network section" \
+  "name=eth0,bridge=vmbr0,ip=dhcp,ip6=manual" lxc_net 0
 
 CONFIG='{"hostname":"c","network":[{"ip-address":"10.0.0.5"}]}'
 resolve_placement
-expect_rc "lxc_net0: an address without a mask is an error" 1 fails lxc_net0
+expect_rc "lxc_net: an address without a mask is an error" 1 fails lxc_net 0
 
 CONFIG='{"hostname":"c"}'
 resolve_placement
-expect "lxc_net0: no network at all -> DHCP" \
-  "name=eth0,bridge=vmbr0,ip=dhcp,ip6=manual" lxc_net0
+expect "lxc_net: no network at all -> DHCP" \
+  "name=eth0,bridge=vmbr0,ip=dhcp,ip6=manual" lxc_net 0
 expect "lxc_nameserver: nothing to say" "" lxc_nameserver
 
-CONFIG='{"hostname":"c","network":[{"ip-address":"10.0.0.5","network-mask":"255.255.255.0"}],"proxmox":{"ip":"192.168.0.9/24","gateway":"192.168.0.1","bridge":"vmbr1"}}'
+CONFIG='{"hostname":"c","network":[{"ip-address":"10.0.0.5","network-mask":"255.255.255.0"}],"proxmox":{"bridge":"vmbr1","nets":[{"ip":"192.168.0.9/24","gateway":"192.168.0.1"}]}}'
 resolve_placement
-expect "lxc_net0: the proxmox keys win over the network section" \
-  "name=eth0,bridge=vmbr1,ip=192.168.0.9/24,gw=192.168.0.1,ip6=manual" lxc_net0
+expect "lxc_net: proxmox.nets wins over the network section" \
+  "name=eth0,bridge=vmbr1,ip=192.168.0.9/24,gw=192.168.0.1,ip6=manual" lxc_net 0
 
-CONFIG='{"hostname":"c","proxmox":{"ip":"10.0.0.5"}}'
+CONFIG='{"hostname":"c","proxmox":{"nets":[{"ip":"10.0.0.5"}]}}'
 resolve_placement
-expect_rc "lxc_net0: proxmox.ip without a prefix length is an error" 1 fails lxc_net0
+expect_rc "lxc_net: an ip without a prefix length is an error" 1 fails lxc_net 0
 
-CONFIG='{"hostname":"c","proxmox":{"net0":"name=eth0,bridge=vmbr9,ip=dhcp"}}'
+CONFIG='{"hostname":"c","proxmox":{"nets":[{"raw":"name=eth0,bridge=vmbr9,ip=dhcp"}]}}'
 resolve_placement
-expect "lxc_net0: proxmox.net0 is passed through verbatim" \
-  "name=eth0,bridge=vmbr9,ip=dhcp" lxc_net0
+expect "lxc_net: raw is passed through verbatim" \
+  "name=eth0,bridge=vmbr9,ip=dhcp" lxc_net 0
+
+CONFIG='{"hostname":"c","network":[{"dhcp":true},{"name":"lan","mac-address":"BC:24:11:00:00:02","ip-address":"192.168.50.2","network-mask":24}],"proxmox":{"nets":["vmbr0",{"bridge":"vmbr1","tag":50}]}}'
+resolve_placement
+expect "lxc_net: name, MAC and VLAN tag of a second interface" \
+  "name=lan,bridge=vmbr1,hwaddr=BC:24:11:00:00:02,tag=50,ip=192.168.50.2/24,ip6=manual" \
+  lxc_net 1
+
+# ------------------------------------------------------ the VM's Proxmox network
+
+PLATFORM="x86_64"
+
+CONFIG='{"hostname":"v"}'
+resolve_placement
+expect "vm_net: only the bridge by default" "virtio,bridge=vmbr0" vm_net 0
+
+CONFIG='{"hostname":"v","network":[{"ip-address":"10.0.0.5","network-mask":"255.255.255.0","mac-address":"bc:24:11:00:00:01"}],"proxmox":{"nets":[{"bridge":"vmbr1","tag":"7"}]}}'
+resolve_placement
+expect "vm_net: the MAC from the network section, bridge and tag from proxmox.nets" \
+  "virtio=bc:24:11:00:00:01,bridge=vmbr1,tag=7" vm_net 0
+
+CONFIG='{"hostname":"v","proxmox":{"nets":[{"ip":"10.0.0.5/24"}]}}'
+resolve_placement
+expect_rc "vm_net: an address in proxmox.nets is an error for a VM" 1 fails vm_net 0
+
+CONFIG='{"hostname":"v","proxmox":{"nets":[{"tag":4095}]}}'
+resolve_placement
+expect_rc "vm_net: a VLAN id out of range is an error" 1 fails vm_net 0
+
+CONFIG='{"hostname":"v","network":[{"mac-address":"bc:24:11:00:01"}]}'
+resolve_placement
+expect_rc "vm_net: a malformed MAC is an error" 1 fails vm_net 0
+
+# ------------------------------------------------------ all interfaces together
+
+net_args() {
+  resolve_target && resolve_placement && resolve_networks \
+    && printf '%s\n' "${NET_ARGS[*]}"
+}
+
+PLATFORM="x86_64"
+CONFIG='{"hostname":"v","network":[{"dhcp":true},{"ip-address":"10.1.0.2","network-mask":24}]}'
+expect "resolve_networks: one interface per network entry" \
+  "--net0 virtio,bridge=vmbr0 --net1 virtio,bridge=vmbr0" net_args
+
+CONFIG='{"hostname":"v","network":[{"dhcp":true}],"proxmox":{"bridge":"vmbr5","nets":[null,"vmbr1","vmbr2"]}}'
+expect "resolve_networks: proxmox.nets alone adds interfaces, proxmox.bridge is the default" \
+  "--net0 virtio,bridge=vmbr5 --net1 virtio,bridge=vmbr1 --net2 virtio,bridge=vmbr2" net_args
+
+CONFIG='{"hostname":"v","proxmox":{"nets":"vmbr1"}}'
+expect_rc "resolve_networks: proxmox.nets must be a list" 1 fails net_args
+
+CONFIG='{"hostname":"v","proxmox":{"nets":[42]}}'
+expect_rc "resolve_networks: an element is a bridge name or an object" 1 fails net_args
+
+for key in net0 ip gateway; do
+  CONFIG="{\"hostname\":\"v\",\"proxmox\":{\"${key}\":\"x\"}}"
+  expect_rc "resolve_networks: proxmox.${key} is rejected, not ignored" 1 fails net_args
+done
+
+PLATFORM="lxc"
+CONFIG='{"hostname":"c","network":[{"ip-address":"10.0.0.5","network-mask":24,"gateway":"10.0.0.1"},{"ip-address":"10.1.0.5","network-mask":24,"gateway":"10.1.0.1"}]}'
+expect_rc "resolve_networks: a container with two gateways is an error" 1 fails net_args
+
+CONFIG='{"hostname":"c","network":[{"ip-address":"10.0.0.5","network-mask":24,"gateway":"10.0.0.1","dns-server":"10.0.0.1"},{"ip-address":"10.1.0.5","network-mask":24}]}'
+expect "resolve_networks: a container with two interfaces" \
+  "--net0 name=eth0,bridge=vmbr0,ip=10.0.0.5/24,gw=10.0.0.1,ip6=manual --net1 name=eth1,bridge=vmbr0,ip=10.1.0.5/24,ip6=manual" \
+  net_args
 
 # -------------------------------------------------------------- what gets issued
 

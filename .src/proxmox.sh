@@ -398,69 +398,203 @@ mask_to_prefix() {
   raise "'${mask}' is not a valid subnet mask."
 }
 
-# The Proxmox side of the container's network: the "proxmox" keys if they say
-# anything, else the first "network" entry, else DHCP.
+# A guest gets one interface per "network" entry, net<i> for network[i]. What
+# only Proxmox needs to know about interface i - its bridge, a VLAN tag - is in
+# proxmox.nets[i], so that "network" stays a description of the system and not
+# of the hypervisor. An interface described in only one of the two still exists,
+# and a guest always has at least one.
+net_count() {
+  sys '[(.network // [] | length), (.proxmox.nets // [] | length), 1] | max'
+}
+
+# A key of proxmox.nets[i]. A bare string there is shorthand for its bridge.
+net_cfg() {
+  printf '%s' "${CONFIG}" | jq -r --argjson i "$1" --arg k "$2" '
+    ((.proxmox.nets // [])[$i] // {})
+    | if type == "string" then {bridge: .} else . end
+    | if has($k) and .[$k] != null then .[$k] else empty end'
+}
+
+# A key of network[i].
+network_cfg() {
+  printf '%s' "${CONFIG}" | jq -r --argjson i "$1" --arg k "$2" '
+    (.network // [])[$i][$k] // empty'
+}
+
+net_bridge() {
+  local bridge
+  bridge="$(net_cfg "$1" bridge)"
+  printf '%s' "${bridge:-${BRIDGE}}"
+}
+
+# Checked here rather than left to qm or pct: a value they reject stops the
+# batch, and under --replace that is after the old guest was destroyed.
+net_tag() {
+  local tag
+  tag="$(net_cfg "$1" tag)"
+  [[ -n "${tag}" ]] || return 0
+  if ! [[ "${tag}" =~ ^[0-9]{1,4}$ ]] || (( 10#${tag} < 1 || 10#${tag} > 4094 )); then
+    raise "proxmox.nets[$1].tag must be a VLAN id from 1 to 4094, not '${tag}'."
+  fi
+  printf '%s' "${tag}"
+}
+
+# The MAC address the system expects on interface i. Giving the guest that
+# address is what lets CuOS find the interface by it (configure_network() in
+# cuos/system/cuos/init.sh matches on "mac-address" before anything else).
+net_mac() {
+  local mac
+  mac="$(network_cfg "$1" mac-address)"
+  if [[ -n "${mac}" && ! "${mac}" =~ ^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$ ]]; then
+    raise "network[$1].mac-address '${mac}' is not a MAC address."
+  fi
+  printf '%s' "${mac}"
+}
+
+# A VM's interface i. Only the wiring: the installed system configures its own
+# addresses from "network", exactly as on hardware.
+vm_net() {
+  local i="$1" raw
+  raw="$(net_cfg "${i}" raw)"
+  if [[ -n "${raw}" ]]; then
+    printf '%s' "${raw}"
+    return 0
+  fi
+  if [[ -n "$(net_cfg "${i}" ip)$(net_cfg "${i}" gateway)" ]]; then
+    raise "proxmox.nets[${i}].ip and .gateway apply to containers only. A VM
+       configures its own addresses from network[${i}]."
+  fi
+
+  local bridge tag mac
+  bridge="$(net_bridge "${i}")"
+  tag="$(net_tag "${i}")" || exit 1
+  mac="$(net_mac "${i}")" || exit 1
+  local net="virtio${mac:+=${mac}},bridge=${bridge}"
+  [[ -z "${tag}" ]] || net+=",tag=${tag}"
+  printf '%s' "${net}"
+}
+
+# A container's interface i: proxmox.nets[i] if it gives an address, else
+# network[i], else DHCP.
 #
 # The "network" section is Proxmox's to use because CuOS configures no network
 # inside a container at all - configure_network() returns immediately for
 # VIRT_TYPE lxc (cuos/system/cuos/init.sh) - so the address is stated once and
 # serves both.
-lxc_net0() {
-  local raw
-  raw="$(cfg net0)"
+lxc_net() {
+  local i="$1" raw
+  raw="$(net_cfg "${i}" raw)"
   if [[ -n "${raw}" ]]; then
     printf '%s' "${raw}"
     return 0
   fi
 
   local ip gateway
-  ip="$(cfg ip)"
-  gateway="$(cfg gateway)"
+  ip="$(net_cfg "${i}" ip)"
+  gateway="$(net_cfg "${i}" gateway)"
   if [[ -z "${ip}" ]]; then
     local dhcp address mask prefix
-    dhcp="$(sys '(.network // [])[0].dhcp // empty')"
-    address="$(sys '(.network // [])[0]["ip-address"] // empty')"
+    dhcp="$(network_cfg "${i}" dhcp)"
+    address="$(network_cfg "${i}" ip-address)"
     if [[ "${dhcp}" == "true" ]]; then
       ip="dhcp"
     elif [[ -n "${address}" ]]; then
-      mask="$(sys '(.network // [])[0]["network-mask"] // empty')"
+      mask="$(network_cfg "${i}" network-mask)"
       if [[ -z "${mask}" ]]; then
-        raise "The first 'network' entry has an 'ip-address' but no
-       'network-mask', so the container's address has no prefix length. Add the
-       mask, or state the address for Proxmox instead:
-         \"proxmox\": { \"ip\": \"${address}/24\" }"
+        raise "network[${i}] has an 'ip-address' but no 'network-mask', so the
+       container's address has no prefix length. Add the mask, or state the
+       address for Proxmox instead, in proxmox.nets[${i}]:
+         { \"ip\": \"${address}/24\" }"
       fi
       # raise() inside a command substitution would only end this shell through
       # 'set -e'; ending it here does not depend on that.
       prefix="$(mask_to_prefix "${mask}")" || exit 1
       ip="${address}/${prefix}"
     fi
-    [[ -n "${gateway}" ]] || gateway="$(sys '(.network // [])[0].gateway // empty')"
+    [[ -n "${gateway}" ]] || gateway="$(network_cfg "${i}" gateway)"
   fi
   [[ -n "${ip}" ]] || ip="dhcp"
 
   if [[ "${ip}" != "dhcp" && "${ip}" != */* ]]; then
-    raise "proxmox.ip must carry a prefix length, e.g. \"${ip}/24\", or be \"dhcp\"."
+    raise "proxmox.nets[${i}].ip must carry a prefix length, e.g. \"${ip}/24\",
+       or be \"dhcp\"."
   fi
 
-  local net0="name=eth0,bridge=${BRIDGE},ip=${ip}"
+  local name bridge tag mac
+  name="$(network_cfg "${i}" name)"
+  bridge="$(net_bridge "${i}")"
+  tag="$(net_tag "${i}")" || exit 1
+  mac="$(net_mac "${i}")" || exit 1
+  local net="name=${name:-eth${i}},bridge=${bridge}"
+  [[ -z "${mac}" ]] || net+=",hwaddr=${mac}"
+  [[ -z "${tag}" ]] || net+=",tag=${tag}"
+  net+=",ip=${ip}"
   if [[ -n "${gateway}" && "${ip}" != "dhcp" ]]; then
-    net0+=",gw=${gateway}"
+    net+=",gw=${gateway}"
   fi
   # pct accepts an address, "auto", "dhcp" or "manual" for ip6; "manual" is the
   # one that leaves the interface without an IPv6 configuration.
-  printf '%s' "${net0},ip6=manual"
+  printf '%s' "${net},ip6=manual"
 }
 
-# Resolvers for the container, likewise stated once. pct takes a space-separated
-# list; system.json allows one name or a list.
+# Resolvers for the container, likewise stated once: those of every "network"
+# entry, in order and each once, because pct has a single space-separated list
+# for the whole container. system.json allows one name or a list per entry.
 lxc_nameserver() {
   local nameserver
   nameserver="$(cfg nameserver)"
   if [[ -z "${nameserver}" ]]; then
-    nameserver="$(sys '[(.network // [])[0]["dns-server"] // empty] | flatten | join(" ")')"
+    nameserver="$(sys '
+      [(.network // [])[]["dns-server"] // empty] | flatten
+      | reduce .[] as $s ([]; if any(.[]; . == $s) then . else . + [$s] end)
+      | join(" ")')"
   fi
   printf '%s' "${nameserver}"
+}
+
+# The --net<i> arguments for qm or pct, in NET_ARGS, and the container's
+# resolvers in NAMESERVER. Resolved before anything is uploaded, so that a
+# mistake in the configuration is reported before the host is touched.
+NET_ARGS=()
+NAMESERVER=""
+
+resolve_networks() {
+  local key
+  # Keys of the single-interface version, which described net0 only. Ignoring
+  # them would put the container on DHCP without a word.
+  for key in net0 ip gateway; do
+    if [[ -n "$(cfg "${key}")" ]]; then
+      raise "proxmox.${key} is now proxmox.nets[0].$([[ "${key}" == net0 ]] \
+        && echo raw || echo "${key}"), see docs/testing-on-proxmox.md."
+    fi
+  done
+  # null keeps an element's place: that interface takes the defaults.
+  [[ "$(sys '.proxmox.nets // [] | type == "array"
+    and all(.[]; type == "string" or type == "object" or type == "null")')" == "true" ]] \
+    || raise "proxmox.nets must be a list of bridge names, objects or null."
+
+  NET_ARGS=()
+  local i count net gateways=0
+  count="$(net_count)"
+  for (( i = 0; i < count; i++ )); do
+    if [[ "${GUEST_TYPE}" == "lxc" ]]; then
+      net="$(lxc_net "${i}")" || exit 1
+      [[ "${net}" != *,gw=* ]] || gateways=$(( gateways + 1 ))
+    else
+      net="$(vm_net "${i}")" || exit 1
+    fi
+    NET_ARGS+=("--net${i}" "${net}")
+  done
+
+  # pct writes every gw= as a default route of its own, and the second one
+  # fails to come up. A VM is not affected: CuOS gives each gateway a metric.
+  if (( gateways > 1 )); then
+    raise "More than one of the container's interfaces has a gateway. A
+       container has one default route: keep the 'gateway' on one network entry."
+  fi
+
+  NAMESERVER=""
+  [[ "${GUEST_TYPE}" != "lxc" ]] || NAMESERVER="$(lxc_nameserver)"
 }
 
 # ---------------------------------------------------------------------- queuing
@@ -475,14 +609,12 @@ queue_lxc() {
     --rootfs "${STORAGE}:${DISK_SIZE}"
     --memory "${MEMORY}"
     --cores "${CORES}"
-    --net0 "$(lxc_net0)"
+    "${NET_ARGS[@]}"
     --features "${FEATURES}"
     --unprivileged "${UNPRIVILEGED}"
     --onboot "${ONBOOT}"
   )
-  local nameserver
-  nameserver="$(lxc_nameserver)"
-  [[ -z "${nameserver}" ]] || args+=(--nameserver "${nameserver}")
+  [[ -z "${NAMESERVER}" ]] || args+=(--nameserver "${NAMESERVER}")
 
   queue "${args[@]}"
 }
@@ -498,7 +630,7 @@ queue_vm_from_iso() {
     --cores "${CORES}" \
     --sockets 1 \
     --ostype l26 \
-    --net0 "virtio,bridge=${BRIDGE}" \
+    "${NET_ARGS[@]}" \
     --scsihw virtio-scsi-pci \
     --scsi0 "${STORAGE}:${DISK_SIZE}" \
     --ide2 "${TEMPLATE_STORAGE}:iso/$(basename "${ARTEFACT}"),media=cdrom" \
@@ -521,7 +653,7 @@ queue_vm_from_image() {
     --cores "${CORES}" \
     --sockets 1 \
     --ostype l26 \
-    --net0 "virtio,bridge=${BRIDGE}" \
+    "${NET_ARGS[@]}" \
     --scsihw virtio-scsi-pci \
     --scsi0 "${STORAGE}:0,import-from=${staged}" \
     --boot "order=scsi0" \
@@ -560,6 +692,7 @@ queue_destroy() {
 action_create() {
   resolve_artefact
   resolve_placement
+  resolve_networks
 
   [[ -f "${ARTEFACT}" ]] || raise "Artefact not found: ${ARTEFACT}
        Build it first, e.g. './tool.sh $(build_hint)'."

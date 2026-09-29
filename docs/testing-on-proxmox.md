@@ -106,7 +106,8 @@ object:
 | `template_storage` | `local` | Where the ISO or container template is uploaded. Must be a directory storage. |
 | `upload_dir` | `/var/tmp` | Where a RAW image is staged before it is imported. Removed afterwards. |
 | `artefact` | `iso`, else `img` | |
-| `bridge` | `vmbr0` | |
+| `bridge` | `vmbr0` | The bridge of every interface that `nets` does not give one. |
+| `nets` | — | Per interface: bridge, VLAN tag, … — see [Network interfaces](#network-interfaces). |
 | `cores` | `2` | |
 | `memory` | `4096` | MB |
 | `disk_size` | `16` | GB. A RAW image is imported at its own size (1636 MB) and then grown to this, so that `/data` has room for the application images; a value below the image's size is ignored. |
@@ -114,8 +115,7 @@ object:
 | `agent` | `true` | VM only. QEMU guest agent, which the system starts by itself on KVM. |
 | `unprivileged` | `false` | LXC only. |
 | `features` | `nesting=1` | LXC only. CuOS runs Docker inside the container and needs nesting. |
-| `ip`, `gateway`, `nameserver` | the `network` section | LXC only, see below. |
-| `net0` | generated | LXC only, escape hatch: replaces the whole generated `net0` value. |
+| `nameserver` | the `network` section | LXC only, see below. |
 
 Precedence, for all of it: **command line > environment > `system.json` >
 default**.
@@ -133,46 +133,95 @@ which is why nothing secret belongs in them. A host name and a bridge are not
 secrets; an ssh key would be, so authentication stays in your ssh
 configuration, where it is anyway.
 
-### The container's network comes from the `network` section
+### Network interfaces
 
-A container's interface belongs to the host, and CuOS knows it: inside a
-container `configure_network()` returns without doing anything, so a `network`
-section in `system.json` is never applied by the container itself.
-
-So it is free for Proxmox to use, and `proxmox-create` uses it — the address is
-stated once, where the rest of the system is described:
+The guest gets **one interface per `network` entry**: `network[0]` is `net0`,
+`network[1]` is `net1`, and so on. What only Proxmox needs to know about an
+interface goes into the same position of `proxmox.nets`, so that `network`
+stays a description of the system:
 
 ```json
 {
   "network": [
-    {
-      "ip-address": "10.10.10.14",
-      "network-mask": "255.255.255.0",
-      "gateway": "10.10.10.1",
-      "dns-server": "10.10.10.1"
-    }
-  ]
+    { "ip-address": "10.10.10.14", "network-mask": "255.255.255.0",
+      "gateway": "10.10.10.1", "dns-server": "10.10.10.1" },
+    { "ip-address": "192.168.50.2", "network-mask": "24",
+      "mac-address": "bc:24:11:00:00:02" }
+  ],
+  "proxmox": {
+    "nets": [
+      "vmbr0",
+      { "bridge": "vmbr1", "tag": 50 }
+    ]
+  }
 }
 ```
 
+An element of `nets` is a bridge name, an object, or `null` for "the defaults".
+The object's keys:
+
+| Key | | |
+|---|---|---|
+| `bridge` | both | Default: `proxmox.bridge`, else `vmbr0`. |
+| `tag` | both | VLAN id, 1–4094. |
+| `ip`, `gateway` | LXC | Overrides the address from `network[i]`, see below. |
+| `raw` | both | Replaces the whole generated `net<i>` value, for anything the keys above do not express (`firewall=1`, `rate=`, `mtu=`, …). |
+
+Whichever of `network` and `nets` is longer decides how many interfaces there
+are, and there is always at least one. An interface described only in `nets` is
+wired up and left unconfigured; one described only in `network` goes on the
+default bridge.
+
+**A `mac-address` in a `network` entry is given to the interface** (`virtio=`
+for a VM, `hwaddr=` for a container). That is what lets a VM's system find the
+right interface for the entry: CuOS matches `network` entries to interfaces by
+MAC first, and only then by position. Without MACs the position does the job —
+`net0`, `net1`, … appear as `ens18`, `ens19`, … and are sorted by name — but
+give the MACs once there are more than a handful of interfaces, or when it has
+to be certain.
+
+The old single-interface keys `proxmox.net0`, `proxmox.ip` and
+`proxmox.gateway` are rejected with a pointer to their place in `nets`, rather
+than silently ignored.
+
+#### VMs: only the wiring
+
+A VM's `net<i>` is the bridge, the tag and the MAC. The installed system
+configures its addresses from `system.json` itself, exactly as on hardware, so
+`ip` and `gateway` in `nets` are an error for a VM.
+
+#### Containers: the addresses come from the `network` section
+
+A container's interfaces belong to the host, and CuOS knows it: inside a
+container `configure_network()` returns without doing anything, so a `network`
+section in `system.json` is never applied by the container itself.
+
+So it is free for Proxmox to use, and `proxmox-create` uses it — the address is
+stated once, where the rest of the system is described. The example above
+becomes:
+
 ```
---net0 name=eth0,bridge=vmbr0,ip=10.10.10.14/24,gw=10.10.10.1,ip6=manual --nameserver 10.10.10.1
+--net0 name=eth0,bridge=vmbr0,ip=10.10.10.14/24,gw=10.10.10.1,ip6=manual
+--net1 name=eth1,bridge=vmbr1,hwaddr=bc:24:11:00:00:02,tag=50,ip=192.168.50.2/24,ip6=manual
+--nameserver 10.10.10.1
 ```
 
-The first entry is the one used — a container gets one interface. `dhcp: true`
-becomes `ip=dhcp`. `network-mask` may be dotted-decimal or a prefix length, and
-a `dns-server` list becomes the space-separated list `pct` expects.
+`dhcp: true` becomes `ip=dhcp`, and an entry with no address at all too.
+`network-mask` may be dotted-decimal or a prefix length. An entry's `name`
+becomes the interface's name inside the container; without one it is `eth<i>`.
 
-`proxmox.ip`, `proxmox.gateway` and `proxmox.nameserver` override all of that,
-for the case where the container should sit somewhere other than where the
-configuration says. `proxmox.ip` needs a prefix length (`10.0.0.5/24`) or
-`dhcp`. With nothing to go on anywhere, `net0` gets `ip=dhcp`.
+`pct` has a single list of resolvers for the whole container, so the
+`dns-server`s of all entries are collected into it, in order and each once.
+`proxmox.nameserver` replaces that list.
 
-`proxmox.net0` replaces the generated value wholesale, for anything this does
-not express — a VLAN tag, a second bridge, a fixed MAC.
+**Only one entry may have a `gateway`.** `pct` turns every `gw=` into a default
+route of its own, and the second one fails to come up — so two are an error
+here rather than a half-configured container. (A VM is not affected: CuOS gives
+each interface's gateway its own metric.)
 
-This applies to containers only. A VM's `net0` is just the bridge: the installed
-system configures its own interfaces from `system.json`, exactly as on hardware.
+`nets[i].ip` and `nets[i].gateway` override `network[i]`, for the case where
+the container should sit somewhere other than where the configuration says.
+`ip` needs a prefix length (`10.0.0.5/24`) or `dhcp`.
 
 ## What a run does on the wire
 
