@@ -414,31 +414,7 @@ docker_login() {
 }
 
 image_name() {
-  local merged_config
-  merged_config="$(cat)"
-  local product_name
-  product_name="$(echo "${merged_config}" | jq -r '.product_name // empty')"
-  if [[ -z "${product_name}" ]]; then
-    if echo "${merged_config}" | jq -r '.init_image' | grep -q 'cuos-iac'; then
-      product_name="CuOS IaC"
-    else
-      product_name="CuOS"
-    fi
-  fi
-  local system_name
-  system_name="$(echo "${merged_config}" | jq -r '.system_name // .hostname // empty')"
-  if [[ -z "${system_name}" ]]; then
-    local file_path
-    file_path="$(echo "${merged_config}" | jq -r '."__filename"')"
-    if [[ "$(basename "${file_path}")" == "system.json" ]]
-    then
-      system_name="$(basename "$(dirname "${file_path}")")"
-    else
-      system_name="$(basename "${file_path}" ".json")"
-    fi
-  fi
-  local image_name="${product_name}-${system_name}"
-  echo "${image_name// /-}"
+  "${SRC_DIR}/artefact-name.sh"
 }
 
 save_config() {
@@ -481,7 +457,7 @@ create_installer() {
   local merged_config
   merged_config="$(cat)"
   local image_name
-  image_name="$(echo "${merged_config}" | image_name)"
+  image_name="$(echo "${merged_config}" | image_name)" || exit 1
 
   make_output_dir
   echo "${merged_config}" >"${OUTPUT_DIR}/${image_name}.json"
@@ -511,7 +487,7 @@ installer_from_base() {
   local merged_config
   merged_config="$(cat)"
   local image_name
-  image_name="$(echo "${merged_config}" | image_name)"
+  image_name="$(echo "${merged_config}" | image_name)" || exit 1
 
   # The output name is derived from the configuration, so it can collide with
   # the base ISO — typically when the base was built from this same config.
@@ -704,7 +680,7 @@ EOF
       step "Merging the configuration"
       merged_config="$("${SRC_DIR}/merge-configs.sh" "${ARGS[@]}")" || exit 1
       resolve_platform "${merged_config}"
-      image_name="$(echo "${merged_config}" | image_name)"
+      image_name="$(echo "${merged_config}" | image_name)" || exit 1
       start_build_log "${image_name}" "${COMMAND}" "$@"
       echo "${merged_config}" | save_config "${image_name}"
       step "Building the system image for '${PLATFORM}'"
@@ -744,7 +720,7 @@ EOF
        ISO boot path yet.
        Use './tool.sh image --platform ${PLATFORM} ...' for a disk image."
         fi
-        image_name="$(echo "${merged_config}" | image_name)"
+        image_name="$(echo "${merged_config}" | image_name)" || exit 1
         start_build_log "${image_name}" "${COMMAND}" "$@"
         echo "${merged_config}" | save_config "${image_name}"
         step "Building the system image for '${PLATFORM}'"
@@ -798,7 +774,7 @@ EOF
         [[ "${DEBUG:-}" == "1" ]] && set -x
         merged_config="$("${SRC_DIR}/merge-configs.sh" "${ARGS[@]}")" || exit 1
         resolve_platform "${merged_config}"
-        image_name="$(echo "${merged_config}" | image_name)"
+        image_name="$(echo "${merged_config}" | image_name)" || exit 1
         echo "${merged_config}" | save_config "${image_name}"
       fi
       create_image "${image_name}" \
@@ -848,7 +824,7 @@ EOF
       [[ "${DEBUG:-}" == "1" ]] && set -x
       merged_config="$("${SRC_DIR}/merge-configs.sh" "${ARGS[@]}")" || exit 1
       resolve_platform_name "${merged_config}"
-      image_name="$(echo "${merged_config}" | image_name)"
+      image_name="$(echo "${merged_config}" | image_name)" || exit 1
       [[ -z "${OPT_HOST}" ]] || export PROXMOX_HOST="${OPT_HOST}"
       [[ -z "${OPT_ID}" ]] || export PROXMOX_VMID="${OPT_ID}"
       [[ -z "${OPT_ARTEFACT}" ]] || export PROXMOX_ARTEFACT="${OPT_ARTEFACT}"

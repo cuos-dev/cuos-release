@@ -172,6 +172,20 @@ Artefacts are named `<product_name>-<system_name>`, both optional:
 - `system_name` defaults to `hostname`, then to the configuration file's name —
   or its directory name if the file is called `system.json`
 
+`artefact_name` replaces that pattern with a template of its own. Each
+`{key}` is the value of that key in the merged configuration, and
+`{product_name}` and `{system_name}` keep the defaults above:
+
+```json
+{
+  "artefact_name": "{product_name}-{system_name}-{product_version}",
+  "product_version": "1.4.0"
+}
+```
+
+A placeholder whose key has no value stops the build. Spaces become dashes, as
+without a template.
+
 `./cuos-release/tool.sh name CONFIG` prints the result.
 
 ### Passwords, signing and encryption
