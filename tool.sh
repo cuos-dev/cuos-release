@@ -521,6 +521,87 @@ installer_from_base() {
   step "output/${image_name}.iso written in $(log_elapsed "${SECONDS}")"
 }
 
+# Run the OS as a docker container: a compose file and the configuration it
+# mounts, both in the current directory so that they can be committed beside the
+# configuration. The configuration is the merged one and may carry secrets
+# pulled in by "#include", so it is git-ignored; the compose file holds none.
+docker_create() {
+  local image_name="$1"
+  local merged_config="$2"
+  shift 2
+
+  local compose_file="${PWD}/${image_name}.compose.yml"
+  local config_file="${PWD}/${image_name}.system.json"
+
+  # The name is derived from the configuration and may be the configuration's
+  # own - an "artefact_name" of "{system_name}" next to "my-system.json".
+  local arg
+  for arg in "${ARGS[@]}"; do
+    if [[ "$(cd -- "$(dirname -- "${arg}")" && pwd)/$(basename -- "${arg}")" == "${config_file}" ]]; then
+      raise "'${arg}' would be overwritten by the merged configuration.
+       Run this from another directory, or give the configuration a different
+       'system_name'."
+    fi
+  done
+
+  local image
+  image="$(echo "${merged_config}" | PLATFORM="${OPT_PLATFORM}" \
+    "${SRC_DIR}/docker-create.sh" image)" || exit 1
+
+  echo "${merged_config}" >"${config_file}"
+
+  # The registry login of the configuration, for the pull below and for a pull
+  # by hand later: './.docker/config.json', like the IaC-local commands.
+  docker_login "${config_file}"
+  download_image \
+    "$(echo "${image}" | jq -r '.image')" \
+    "$(echo "${image}" | jq -r '.digest')" \
+    "$(echo "${image}" | jq -r '.platform // empty')"
+
+  step "Writing ${image_name}.compose.yml"
+  local compose
+  compose="$(echo "${merged_config}" | \
+    PLATFORM="${OPT_PLATFORM}" \
+    IMAGE_NAME="${image_name}" \
+    CONFIG_FILE="./${image_name}.system.json" \
+    COMMAND_LINE="docker-create $*" \
+    "${SRC_DIR}/docker-create.sh" compose)" || exit 1
+  printf '%s\n' "${compose}" >"${compose_file}"
+
+  if git -C "${PWD}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    gitignore_add "/${image_name}.system.json"
+    gitignore_add "/.docker/"
+  fi
+
+  step "${image_name}.compose.yml and ${image_name}.system.json written"
+  cat <<EOF
+
+Start:   docker compose -f ${image_name}.compose.yml up -d
+Shell:   docker compose -f ${image_name}.compose.yml exec $(echo "${compose}" | sed -n 's/^name: "\(.*\)"$/\1/p') bash
+Remove:  docker compose -f ${image_name}.compose.yml down -v
+         (-v deletes /data too; without it the next start keeps the
+         configuration CuOS read on its first start)
+
+The image is already pulled. To pull it again from a registry that needs the
+login of the configuration:
+         DOCKER_CONFIG="\${PWD}/.docker" docker compose -f ${image_name}.compose.yml pull
+EOF
+}
+
+# Add a line to ./.gitignore, once.
+gitignore_add() {
+  local pattern="$1"
+  local gitignore="${PWD}/.gitignore"
+
+  if [[ -f "${gitignore}" ]]; then
+    grep -qxF -- "${pattern}" "${gitignore}" && return 0
+    if [[ -s "${gitignore}" && -n "$(tail -c1 "${gitignore}")" ]]; then
+      echo >>"${gitignore}"
+    fi
+  fi
+  echo "${pattern}" >>"${gitignore}"
+}
+
 iac_local_download() {
   local iac_compose_file="${SCRIPT_DIR}/cuos-iac-local/docker-compose.yml"
   if [[ "${DEVELOPMENT:-}" == "1" ]]; then
@@ -837,6 +918,30 @@ EOF
         PROXMOX_NO_START="${OPT_NO_START}" \
         PROXMOX_DRY_RUN="${OPT_DRY_RUN}" \
         "${SRC_DIR}/proxmox.sh" "${COMMAND#proxmox-}"
+      ;;
+
+##
+## DOCKER
+## docker-create   [--platform P] system.json[]
+##                                 - Write NAME.compose.yml and NAME.system.json
+##                                   to this directory: the OS itself as a
+##                                   docker container. Start it with
+##                                   'docker compose -f NAME.compose.yml up -d'.
+##
+##   --platform P  Which image: "<P>_image". Default: lxc_image, else os_image.
+##                 Networks are set in "docker": {"nets": ...} in system.json,
+##                 see docs/running-in-docker.md.
+    "docker-create")
+      parse_options "$@"
+      [[ -z "${OPT_BASE}" ]] || raise "--base is only valid for 'installer'."
+      [[ -z "${OPT_LAYOUT}" ]] || raise "--layout has no effect here: a container
+       has no disk."
+      reject_proxmox_options "docker-create"
+      [[ "${DEBUG:-}" == "1" ]] && set -x
+      step "Merging the configuration"
+      merged_config="$("${SRC_DIR}/merge-configs.sh" "${ARGS[@]}")" || exit 1
+      image_name="$(echo "${merged_config}" | image_name)" || exit 1
+      docker_create "${image_name}" "${merged_config}" "$@"
       ;;
 
 ## start-iac-local path/to/system.json[] - Start IaC local,

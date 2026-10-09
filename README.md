@@ -26,6 +26,7 @@ the OS, start at [cuos](https://github.com/cuos-dev/cuos) instead.
   partitioning a disk, so it builds anywhere Docker runs.
 - For `config-sign`: **ssh-keygen**
 - For `proxmox-*`: **ssh** and **scp**
+- For `docker-create`: **Docker Compose 2.30** or newer
 - Around 6 GB of free disk space.
 
 ## Quickstart
@@ -100,6 +101,7 @@ On first boot CuOS sets up its subvolumes, applies the configuration, and starts
 | `tool.sh image CONFIG` | A raw disk image (`.img`) to write to a disk | [Building disk images](docs/building-images.md) |
 | `tool.sh installer CONFIG` | An ISO installer that installs onto the target's disk | [Building an installer](docs/building-installers.md) |
 | `tool.sh image --platform lxc CONFIG` | A `tar.gz` to import as an LXC container | [LXC and Proxmox](docs/lxc-proxmox.md) |
+| `tool.sh docker-create CONFIG` | A compose file that runs the system as a Docker container | [Running CuOS as a Docker container](docs/running-in-docker.md) |
 
 To try one of them out, `tool.sh` can also put the result on a
 [Proxmox VE](https://www.proxmox.com/) host and start it:
