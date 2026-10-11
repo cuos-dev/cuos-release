@@ -297,8 +297,9 @@ costs one system's secrets and one paste, not every system's.
 
 6. **Paste it into the WebUI**, on the *Config* page (`/config`). Per device.
 
-The device verifies the signature against `iac_repo_signing_keys`, merges the
-configuration and applies it. From then on it can read the `.enc` files from
+The device verifies the signature against `iac_repo_signing_keys` and applies
+the configuration in place of what it was told from outside, as it does with the
+repository's `system.json`. From then on it can read the `.enc` files from
 step 3.
 
 ### What can go wrong
@@ -309,9 +310,11 @@ step 3.
 - **The signature expires after 15 minutes.** Sign, then paste; check the
   device's clock if it is refused.
 - **Your own signing key must be in the list**, not just the leaver's removed.
-- **The configuration is merged, not replaced.** Keys you send overwrite, keys
-  you omit stay — so this cannot delete one. Lists are the exception: a list
-  replaces the old one entirely, which is what makes step 4 work.
+- **The configuration replaces, it is not merged.** Sign the complete
+  `system.json`, the one the repository holds — `config-sign` resolves its
+  `#include`s the way a build does. A key left out is removed from the device,
+  and the leaver's signing key in step 4 goes the same way. Settings made on the
+  device itself (the console, `cuos patch`) stay.
 - **It is one paste per device.**
 
 ### Or reinstall
