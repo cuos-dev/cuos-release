@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 services:
   cuos-iac:
-    image: "ghcr.io/cuos-dev/cuos-iac:v0.4.3"
-    x-digest: "sha256:121af008740ae236a0d81c05b6bce12b8a59b9d497c813f0cd6d974e419699ff"
+    image: "ghcr.io/cuos-dev/cuos-iac:v0.4.4"
+    x-digest: "sha256:805c06575c0b4c4ad1f59e4dd785f503053fe919aeea8b3bbc9b6fffe00faea6"
     volumes:
       - type: bind
         source: "${DOCKER_CONFIG:-${HOME:-/root}/.docker}/config.json"
