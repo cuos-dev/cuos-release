@@ -702,8 +702,11 @@ main() {
     }
   fi
 
+  # Another release's pins build that release again - its factories are the
+  # ones that can. The update test installs an older release before moving it.
   # shellcheck source=/dev/null
-  source "${SCRIPT_DIR}/.versions.env"
+  source "${VERSIONS_FILE:-"${SCRIPT_DIR}/.versions.env"}" \
+    || raise "Cannot read the factory pins: ${VERSIONS_FILE:-.versions.env}"
 
   if [[ "${DEVELOPMENT:-}" == "1" ]]; then
     IMAGE_FACTORY_VERSION="ghcr.io/cuos-dev/cuos-image-factory:development"
