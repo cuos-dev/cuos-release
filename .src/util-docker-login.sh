@@ -86,7 +86,7 @@ load_update_registry() {
 
   # dont use update_registry_proxy here, because we are not yet in the
   # target infrastructure. Thus the proxy might not be reachable.
-  update_registry="$(jq -r '.update_registry' "$config_file")"
+  update_registry="$(jq -r '.update_registry // empty' "$config_file")"
   update_registry_server="${update_registry//\/*}"
   update_registry_user="$(jq -r '.update_registry_user // .update_server_user // ""' "$config_file")"
   update_registry_password="$(jq -r '.update_registry_password // .update_server_password // ""' "$config_file")"
@@ -129,8 +129,8 @@ if [ "${BASH_SOURCE[0]}" = "$0" ]; then
   IFS=';' read -r server user password <<< "$(load_update_registry "$CONFIG_PATH")"
   if [ -n "$server" ] && [ -n "$user" ] && [ -n "$password" ]; then
     docker_login "$server" "$user" "$password" || exit 1
-  else
-    echo "Warning: No registry credentials found in config."
+  elif [ -n "$server" ]; then
+    echo "No credentials for ${server} in the config: pulling from it anonymously."
   fi
 
   # Process additional registries
