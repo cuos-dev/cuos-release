@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 services:
   cuos-iac-fleet-agent:
-    image: "ghcr.io/cuos-dev/cuos-iac-fleet-agent:v0.4.3"
-    x-digest: "sha256:f3f9f13802bccb2fddc989ef07fc3f06e919faa52f869322677367851246f1f6"
+    image: "ghcr.io/cuos-dev/cuos-iac-fleet-agent:v0.4.4"
+    x-digest: "sha256:b482009e5b4bd597dd84b9aec307256dd1bb829231353575f0c0f59c859215a8"
     volumes:
       - type: bind
         source: "${SYSTEM_CONFIG_PATH:-/system.json}"
