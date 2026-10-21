@@ -26,7 +26,7 @@ the OS, start at [cuos](https://github.com/cuos-dev/cuos) instead.
   partitioning a disk, so it builds anywhere Docker runs.
 - For `config-sign`: **ssh-keygen**
 - For `proxmox-*`: **ssh** and **scp**
-- For `docker-create`: **Docker Compose 2.30** or newer
+- For `docker-create`: **Docker Compose**
 - Around 6 GB of free disk space.
 
 ## Quickstart

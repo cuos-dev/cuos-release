@@ -12,8 +12,7 @@ not like a system on hardware.
 
 ## Prerequisites
 
-- Docker with Compose **2.30** or newer (for `post_start`, see
-  [below](#the-image-the-container-runs))
+- Docker with Compose
 - `jq`
 - An x86_64 host for the default image. Elsewhere, see
   [Choosing the image](#choosing-the-image).
@@ -64,10 +63,12 @@ Two systems included this way may share a network by giving it the same name.
 |---|---|
 | `entrypoint: /sbin/init` | The images' own entrypoint only sleeps. |
 | `privileged: true` | systemd, and the Docker daemon inside. |
+| `restart: unless-stopped` | A reboot inside CuOS — after an update, or when the Init App fails — ends the container. This starts it again. |
 | `/data` as a named volume | State, and `/var/lib/docker`, which the image links to `/data/docker`. |
 | `NAME.system.json` → `/system_init.json` | CuOS in a container reads its configuration from there, once. |
 | `hostname` | From `system.json`. |
 | `dns` | Every `dns-server` of every `network` entry, each once. |
+| `docker_net_space` `10.236.0.0/20` | Only in `NAME.system.json`, and only if the configuration sets none. The Docker inside CuOS takes its networks from this range, by default `10.235.240.0/20` — the range a CuOS host takes the compose networks from. |
 
 **The configuration is read on the first start only.** CuOS copies it to
 `/data` and never looks at `/system_init.json` again, so after changing
@@ -110,12 +111,7 @@ DOCKER_CONFIG="${PWD}/.docker" docker compose -f CuOS-my-system.compose.yml pull
 An update compares against `/etc/image`, which `first-run.sh` writes. A
 container started from the image has never run it, so the compose file passes
 the image in `CUOS_IMAGE` and `CUOS_IMAGE_DIGEST`, which CuOS reads on its first
-start.
-
-Images released before that read nothing from the environment, and would write
-`unknown@unknown`. For them the service carries a `post_start` hook that runs
-`first-run.sh` with the right values — but only while `/etc/image` is missing or
-`unknown@unknown`, so that it never undoes an update made inside the container.
+start — from `cuos` v0.6.3 on. An older image writes `unknown@unknown`.
 
 ## Networks
 
@@ -175,7 +171,6 @@ part of the configuration schema.
 
 | Symptom | Look at |
 |---|---|
-| `post_start` is rejected | Compose older than 2.30. Update it. |
 | `exec format error`, or the container exits at once on an arm64 host | The amd64 image without emulation. Use `--platform rpi-arm64`. |
 | `Pool overlaps with other one on this address space` | A `static` bridge whose subnet another network on this host already has. |
 | `up` fails: the bind source path does not exist | `NAME.system.json` is missing beside the compose file, as after a fresh clone — run `docker-create` again. |

@@ -9,6 +9,7 @@
 #   ./docker-create.sh image     the image to run, as JSON:
 #                                {ref, image, digest, platform}
 #   ./docker-create.sh compose   the compose file, as YAML
+#   ./docker-create.sh config    the configuration the container is given
 #
 # Everything else arrives in the environment:
 #
@@ -26,6 +27,9 @@
 #   entrypoint /sbin/init  the images' own entrypoint only sleeps; CuOS is
 #                          systemd as PID 1
 #   privileged             systemd and the docker daemon inside it
+#   restart                a reboot inside CuOS - after an update, or when the
+#                          Init App fails - ends systemd and with it the
+#                          container
 #   /data                  a volume: state, and /var/lib/docker, which the
 #                          image links to /data/docker - a docker inside on
 #                          overlay-on-overlay would not start
@@ -237,13 +241,6 @@ action_image() {
   printf '%s\n' "${image}"
 }
 
-# Until the published images read CUOS_IMAGE themselves (cuos, init.sh
-# container_env), the hook writes /etc/image after the start. Guarded: an
-# update inside the container switches the slot and writes /etc/image itself,
-# and every later start would undo it. Its only race is with init.sh's own
-# first-run on the very first start, and either order ends with the image named.
-POST_START='[ -f /etc/image ] && [ "$(cat /etc/image)" != "unknown@unknown" ] || exec /usr/local/cuos/first-run.sh A "$CUOS_IMAGE" "$CUOS_IMAGE_DIGEST"'
-
 # The compose file as JSON, before it is written as YAML.
 compose_json() {
   [[ -n "${IMAGE_NAME}" ]] || raise "IMAGE_NAME is not set. Run this through tool.sh."
@@ -254,7 +251,6 @@ compose_json() {
     --arg platform "${PLATFORM}" \
     --arg name "${IMAGE_NAME}" \
     --arg config_file "${CONFIG_FILE}" \
-    --arg post_start "${POST_START}" \
     "${JQ_LIB}"'
     image($platform) as $image
     | networks as $networks
@@ -270,13 +266,13 @@ compose_json() {
             entrypoint: ["/sbin/init"],
             hostname: (.hostname // null),
             privileged: true,
+            restart: "unless-stopped",
             tty: true,
             stop_signal: "SIGRTMIN+3",
             environment: {
               CUOS_IMAGE: $image.image,
               CUOS_IMAGE_DIGEST: (if $image.digest == "" then "unknown" else $image.digest end)
             },
-            post_start: [{command: ["sh", "-c", $post_start]}],
             volumes: [
               {type: "volume", source: ($service + "-data"), target: "/data"},
               {type: "bind", source: $config_file, target: "/system_init.json",
@@ -308,6 +304,17 @@ compose_json() {
       }
     ' 2>&1)" || raise "${json#jq: error*: }"
   printf '%s\n' "${json}"
+}
+
+# The docker daemon inside CuOS takes its networks from docker_net_space,
+# 10.235.240.0/20 unless set. The networks of the compose project come from the
+# host's docker - from the same range if the host is a CuOS too - so the
+# container gets the /20 after it.
+DOCKER_NET_SPACE="10.236.0.0/20"
+
+action_config() {
+  printf '%s' "${CONFIG}" | jq --arg space "${DOCKER_NET_SPACE}" \
+    '.docker_net_space //= $space'
 }
 
 # A JSON value on stdin, as YAML.
@@ -342,7 +349,8 @@ main() {
   case "${action}" in
     image) action_image ;;
     compose) action_compose ;;
-    *) raise "Unknown action '${action}'. Use image or compose." ;;
+    config) action_config ;;
+    *) raise "Unknown action '${action}'. Use image, compose or config." ;;
   esac
 }
 

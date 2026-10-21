@@ -189,6 +189,22 @@ CONFIG="$(echo "${CONFIG_BASE}" | jq 'del(.lxc_image_digest)')"
 expect "service: no digest is 'unknown', as on the system" \
   'unknown' compose_value '.services["cuos-demo"].environment.CUOS_IMAGE_DIGEST'
 
+expect "service: restarted after a reboot inside" \
+  'unless-stopped' compose_value '.services["cuos-demo"].restart'
+
+# -------------------------------------------------------------------- config
+
+config_value() {
+  action_config | jq -r "$1"
+}
+
+CONFIG="${CONFIG_BASE}"
+expect "config: the /20 after CuOS's default for the docker inside" \
+  '10.236.0.0/20' config_value '.docker_net_space'
+expect "config: the rest unchanged" 'demo' config_value '.hostname'
+CONFIG="$(echo "${CONFIG_BASE}" | jq '.docker_net_space = "172.30.0.0/16"')"
+expect "config: one of its own is kept" '172.30.0.0/16' config_value '.docker_net_space'
+
 # ---------------------------------------------------------------------- yaml
 
 expect "yaml: maps, lists and scalars" \
