@@ -548,7 +548,7 @@ docker_create() {
   image="$(echo "${merged_config}" | PLATFORM="${OPT_PLATFORM}" \
     "${SRC_DIR}/docker-create.sh" image)" || exit 1
 
-  echo "${merged_config}" | "${SRC_DIR}/docker-create.sh" config >"${config_file}" || exit 1
+  echo "${merged_config}" >"${config_file}"
 
   # The registry login of the configuration, for the pull below and for a pull
   # by hand later: './.docker/config.json', like the IaC-local commands.

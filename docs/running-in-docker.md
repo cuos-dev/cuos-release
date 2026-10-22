@@ -68,7 +68,13 @@ Two systems included this way may share a network by giving it the same name.
 | `NAME.system.json` → `/system_init.json` | CuOS in a container reads its configuration from there, once. |
 | `hostname` | From `system.json`. |
 | `dns` | Every `dns-server` of every `network` entry, each once. |
-| `docker_net_space` `10.236.0.0/20` | Only in `NAME.system.json`, and only if the configuration sets none. The Docker inside CuOS takes its networks from this range, by default `10.235.240.0/20` — the range a CuOS host takes the compose networks from. |
+
+Inside, CuOS adapts two things to running as a container (`cuos` after
+v0.6.3): its own Docker takes its networks from `10.235.224.0/20` instead of
+`10.235.240.0/20`, the range a CuOS host takes the compose networks from — a
+`docker_net_space` in the configuration still wins. And the containers it runs
+resolve names through the container's resolver, the other compose services
+included, unless the configuration names `dns-server`s.
 
 **The configuration is read on the first start only.** CuOS copies it to
 `/data` and never looks at `/system_init.json` again, so after changing

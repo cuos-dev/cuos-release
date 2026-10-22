@@ -9,7 +9,6 @@
 #   ./docker-create.sh image     the image to run, as JSON:
 #                                {ref, image, digest, platform}
 #   ./docker-create.sh compose   the compose file, as YAML
-#   ./docker-create.sh config    the configuration the container is given
 #
 # Everything else arrives in the environment:
 #
@@ -306,17 +305,6 @@ compose_json() {
   printf '%s\n' "${json}"
 }
 
-# The docker daemon inside CuOS takes its networks from docker_net_space,
-# 10.235.240.0/20 unless set. The networks of the compose project come from the
-# host's docker - from the same range if the host is a CuOS too - so the
-# container gets the /20 after it.
-DOCKER_NET_SPACE="10.236.0.0/20"
-
-action_config() {
-  printf '%s' "${CONFIG}" | jq --arg space "${DOCKER_NET_SPACE}" \
-    '.docker_net_space //= $space'
-}
-
 # A JSON value on stdin, as YAML.
 to_yaml() {
   jq -r "${JQ_LIB}"' yaml("")'
@@ -349,8 +337,7 @@ main() {
   case "${action}" in
     image) action_image ;;
     compose) action_compose ;;
-    config) action_config ;;
-    *) raise "Unknown action '${action}'. Use image, compose or config." ;;
+    *) raise "Unknown action '${action}'. Use image or compose." ;;
   esac
 }
 
